@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "HighFiveExpo",
-    "slug": "HighFiveExpo",
+    "name": "High Five",
+    "slug": "highfive",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,21 +10,34 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#F2FAF5"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.highfive.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "High Five uses your location to show it on the dashboard."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#F2FAF5"
       },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "package": "com.highfive.app",
+      "permissions": ["ACCESS_FINE_LOCATION"]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "High Five uses your location to show it on the dashboard."
+        }
+      ]
+    ]
   }
 }
