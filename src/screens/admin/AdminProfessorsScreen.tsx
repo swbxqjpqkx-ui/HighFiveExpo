@@ -1,217 +1,376 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, TextInput,
+  View, Text, ScrollView, StyleSheet, ActivityIndicator,
+  TouchableOpacity, TextInput, Modal, Alert,
 } from 'react-native';
-import { getProfessorOverviews, getPendingApprovals, approveDocument, declineDocument } from '../../services/supabase';
-import { ProfessorOverview, PendingApproval } from '../../types';
+import { getProfessorOverviews } from '../../services/supabase';
+import {
+  getAllPendingSubmissions, approveSubmission, declineSubmission,
+  requestChanges, PendingSubmission,
+} from '../../services/adminAccreditation';
+import { ProfessorOverview, Profile } from '../../types';
 
 const C = {
-  green50:  '#f0f6ef',
-  green600: '#2a8a4d',
-  green700: '#1d6e3a',
-  text:     '#1a2418',
-  muted:    '#6b7264',
-  soft:     '#8e948a',
-  border:   '#e4ebe2',
-  red:      '#d94343',
-  amber:    '#d99a1f',
-  blue:     '#3b6fd1',
-  card:     '#ffffff',
-  bg:       '#f5f9f3',
+  forest:  '#1A5C38', leaf: '#3A8F5F', mist: '#F2FAF5',
+  ink:     '#1A1A1A', inkMid: 'rgba(26,26,26,0.6)', inkSoft: 'rgba(26,26,26,0.38)',
+  border:  '#E0EDE6', card: '#FFFFFF',
+  red:     '#C0392B', redBg: '#FDF1F0',
+  amber:   '#92600A', amberBg: '#FFFBEB',
+  blue:    '#1D4ED8', blueBg: '#EFF6FF',
+  purple:  '#6D28D9', purpleBg: '#F5F3FF',
+  green50: '#EFF6EF',
 };
 
-const FILE_ICONS: Record<string, string> = {
-  pdf:   '📄',
-  excel: '📊',
-  word:  '📝',
-  ppt:   '📑',
+const STATUS_CFG: Record<string, { label: string; bg: string; color: string }> = {
+  pending:           { label: 'Pending',           bg: C.amberBg,  color: C.amber  },
+  approved:          { label: 'Approved',           bg: C.green50,  color: C.forest },
+  declined:          { label: 'Declined',           bg: C.redBg,    color: C.red    },
+  changes_requested: { label: 'Changes Requested', bg: C.purpleBg, color: C.purple },
 };
 
-const AdminProfessorsScreen: React.FC = () => {
-  const [professors, setProfessors] = useState<ProfessorOverview[]>([]);
-  const [approvals, setApprovals]   = useState<PendingApproval[]>([]);
-  const [loading, setLoading]       = useState(true);
-  const [declineId, setDeclineId]   = useState<string | null>(null);
-  const [comment, setComment]       = useState('');
-  const [actionMsg, setActionMsg]   = useState('');
+const FILE_ICON: Record<string, string> = {
+  pdf: '📄', word: '📝', ppt: '📊', excel: '📈',
+  image: '🖼', link: '🔗', other: '📎', syllabus: '📋',
+};
 
-  useEffect(() => {
-    Promise.all([getProfessorOverviews(), getPendingApprovals()])
-      .then(([profs, apps]) => { setProfessors(profs); setApprovals(apps); })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+interface Props { profile: Profile; }
+
+const AdminProfessorsScreen: React.FC<Props> = ({ profile }) => {
+  const [professors, setProfessors]   = useState<ProfessorOverview[]>([]);
+  const [submissions, setSubmissions] = useState<PendingSubmission[]>([]);
+  const [loading, setLoading]         = useState(true);
+
+  // Action modal state
+  const [actionModal, setActionModal] = useState<{
+    sub: PendingSubmission; mode: 'decline' | 'changes';
+  } | null>(null);
+  const [actionText, setActionText]   = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+
+  // Submission filter
+  const [showAll, setShowAll] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [profs, subs] = await Promise.all([
+        getProfessorOverviews(),
+        getAllPendingSubmissions(),
+      ]);
+      setProfessors(profs);
+      setSubmissions(subs);
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const handleApprove = async (id: string) => {
-    await approveDocument(id);
-    setApprovals(prev => prev.filter(a => a.id !== id));
-    setActionMsg('Document approved.');
-    setTimeout(() => setActionMsg(''), 3000);
+  useEffect(() => { load(); }, [load]);
+
+  const handleApprove = async (sub: PendingSubmission) => {
+    try {
+      await approveSubmission(sub, profile.id);
+      await load();
+    } catch (e: any) { Alert.alert('Error', e.message); }
   };
 
-  const handleDecline = async (id: string) => {
-    await declineDocument(id, comment);
-    setApprovals(prev => prev.filter(a => a.id !== id));
-    setDeclineId(null);
-    setComment('');
-    setActionMsg('Document declined.');
-    setTimeout(() => setActionMsg(''), 3000);
+  const handleActionSubmit = async () => {
+    if (!actionModal || !actionText.trim()) {
+      Alert.alert('Required', 'Please write a message.');
+      return;
+    }
+    setActionLoading(true);
+    try {
+      if (actionModal.mode === 'decline') {
+        await declineSubmission(actionModal.sub, actionText.trim());
+      } else {
+        await requestChanges(actionModal.sub, actionText.trim());
+      }
+      setActionModal(null);
+      setActionText('');
+      await load();
+    } catch (e: any) { Alert.alert('Error', e.message); }
+    finally { setActionLoading(false); }
   };
 
-  const formatDate = (iso: string) => {
-    const d = new Date(iso);
-    return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
-  };
+  const fmtDate = (iso: string) =>
+    new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+  const pendingSubs  = submissions.filter(s => s.status === 'pending');
+  const displayedSubs = showAll ? submissions : pendingSubs;
+  const pendingCount = pendingSubs.length;
 
   return (
-    <ScrollView style={s.container} contentContainerStyle={s.content}>
-      <Text style={s.pageTitle}>Professors Overview &amp; Coordination</Text>
+    <ScrollView style={s.root} contentContainerStyle={s.content}>
+      <Text style={s.pageTitle}>Professors Overview</Text>
 
       {/* KPI tiles */}
       <View style={s.tilesRow}>
         {[
-          { label: 'Courses Below Benchmark', value: 7,  color: C.red,      accent: C.red },
-          { label: 'Requiring Support',       value: 4,  color: C.amber,    accent: C.amber },
-          { label: 'Pending Approvals',       value: approvals.length, color: C.blue, accent: C.blue },
-          { label: 'Delayed Grading',         value: 9,  color: C.green600, accent: C.green600 },
+          { label: 'Pending Approvals', value: pendingCount,         color: C.amber,  border: C.amber  },
+          { label: 'Total Professors',  value: professors.length,    color: C.forest, border: C.forest },
+          { label: 'Need Support',      value: professors.filter(p => p.needs_support).length, color: C.red,  border: C.red },
+          { label: 'All Submissions',   value: submissions.length,   color: C.blue,   border: C.blue   },
         ].map(tile => (
-          <View key={tile.label} style={[s.tile, { borderLeftColor: tile.accent }]}>
+          <View key={tile.label} style={[s.tile, { borderLeftColor: tile.border }]}>
             <Text style={[s.tileVal, { color: tile.color }]}>{tile.value}</Text>
             <Text style={s.tileLbl}>{tile.label}</Text>
           </View>
         ))}
       </View>
 
-      {/* Action message */}
-      {actionMsg ? <View style={s.actionMsg}><Text style={s.actionMsgText}>{actionMsg}</Text></View> : null}
-
-      {/* Pending Approvals — shown first */}
+      {/* ── Pending Approvals ── */}
       <View style={s.card}>
-        <Text style={s.sectionTitle}>Pending Approvals ({approvals.length})</Text>
-        {approvals.length === 0 ? (
-          <Text style={s.empty}>No pending approvals.</Text>
+        <View style={s.cardHead}>
+          <View>
+            <Text style={s.sectionTitle}>Pending Approvals</Text>
+            <Text style={s.sectionSub}>Syllabi and course materials from professors</Text>
+          </View>
+          <TouchableOpacity onPress={() => setShowAll(v => !v)} style={s.toggleBtn}>
+            <Text style={s.toggleBtnTxt}>{showAll ? 'Show pending' : 'Show all'}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {loading ? (
+          <ActivityIndicator size="small" color={C.forest} style={{ marginVertical: 20 }} />
+        ) : displayedSubs.length === 0 ? (
+          <View style={s.empty}>
+            <Text style={s.emptyIcon}>✅</Text>
+            <Text style={s.emptyTxt}>
+              {showAll ? 'No submissions yet.' : 'No pending approvals — all clear.'}
+            </Text>
+          </View>
         ) : (
-          approvals.map(ap => (
-            <View key={ap.id}>
-              <View style={s.approvalRow}>
-                <Text style={s.fileIcon}>{FILE_ICONS[ap.file_type] ?? '📎'}</Text>
-                <View style={s.approvalBody}>
-                  <Text style={s.approvalDoc}>{ap.document_name}</Text>
-                  <Text style={s.approvalProf}>{ap.professor_name} · {ap.professor_email}</Text>
-                  <Text style={s.approvalDate}>Submitted {formatDate(ap.submitted_at)}</Text>
-                </View>
-                <View style={s.approvalBtns}>
-                  <TouchableOpacity style={s.approveBtn} onPress={() => handleApprove(ap.id)}>
-                    <Text style={s.approveBtnText}>Approve</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={s.declineBtn} onPress={() => setDeclineId(declineId === ap.id ? null : ap.id)}>
-                    <Text style={s.declineBtnText}>Decline</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-              {/* Decline form */}
-              {declineId === ap.id && (
-                <View style={s.declineForm}>
-                  <TextInput
-                    style={s.declineInput}
-                    value={comment}
-                    onChangeText={setComment}
-                    placeholder="Reason for declining..."
-                    placeholderTextColor={C.soft}
-                    multiline
-                  />
-                  <View style={s.declineFormBtns}>
-                    <TouchableOpacity style={s.declineConfirm} onPress={() => handleDecline(ap.id)}>
-                      <Text style={s.declineConfirmText}>Confirm Decline</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => { setDeclineId(null); setComment(''); }}>
-                      <Text style={s.cancelText}>Cancel</Text>
-                    </TouchableOpacity>
+          displayedSubs.map(sub => {
+            const st = STATUS_CFG[sub.status] ?? STATUS_CFG.pending;
+            const isPending = sub.status === 'pending';
+            return (
+              <View key={sub.id} style={s.subCard}>
+                {/* Top row */}
+                <View style={s.subTop}>
+                  <Text style={s.subFileIcon}>{FILE_ICON[sub.file_type ?? sub.type] ?? '📎'}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.subCourse} numberOfLines={1}>{sub.course_name}</Text>
+                    <Text style={s.subMeta}>
+                      {[sub.program, sub.semester].filter(Boolean).join(' · ')}
+                    </Text>
+                  </View>
+                  <View style={[s.statusChip, { backgroundColor: st.bg }]}>
+                    <Text style={[s.statusChipTxt, { color: st.color }]}>{st.label}</Text>
                   </View>
                 </View>
-              )}
-            </View>
-          ))
+
+                {/* Info row */}
+                <View style={s.subInfo}>
+                  <Text style={s.subInfoTxt}>👤 {sub.professor_name}</Text>
+                  <Text style={s.subInfoTxt}>
+                    {sub.type === 'syllabus' ? '📋 Syllabus' : '📎 Material'}
+                  </Text>
+                  <Text style={s.subInfoTxt}>🕐 {fmtDate(sub.submitted_at)}</Text>
+                </View>
+
+                {sub.file_name && (
+                  <Text style={s.subFileName} numberOfLines={1}>
+                    {FILE_ICON[sub.file_type ?? 'other']} {sub.file_name}
+                  </Text>
+                )}
+
+                {sub.reason && (
+                  <View style={s.reasonBox}>
+                    <Text style={s.reasonLabel}>Professor's note</Text>
+                    <Text style={s.reasonText} numberOfLines={2}>{sub.reason}</Text>
+                  </View>
+                )}
+
+                {sub.admin_comment && !isPending && (
+                  <View style={[s.reasonBox, { borderLeftColor: C.purple }]}>
+                    <Text style={[s.reasonLabel, { color: C.purple }]}>Your last comment</Text>
+                    <Text style={s.reasonText} numberOfLines={2}>{sub.admin_comment}</Text>
+                  </View>
+                )}
+
+                {/* Actions — only for pending */}
+                {isPending && (
+                  <View style={s.subActions}>
+                    <TouchableOpacity
+                      style={s.btnDecline}
+                      onPress={() => { setActionModal({ sub, mode: 'decline' }); setActionText(''); }}
+                    >
+                      <Text style={s.btnDeclineTxt}>✕ Decline</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={s.btnChanges}
+                      onPress={() => { setActionModal({ sub, mode: 'changes' }); setActionText(''); }}
+                    >
+                      <Text style={s.btnChangesTxt}>✏ Changes</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={s.btnApprove}
+                      onPress={() => handleApprove(sub)}
+                    >
+                      <Text style={s.btnApproveTxt}>✓ Approve</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            );
+          })
         )}
       </View>
 
-      {/* All Professors table — shown below approvals */}
-      {loading ? (
-        <ActivityIndicator size="large" color={C.green600} style={{ marginVertical: 30 }} />
-      ) : (
-        <View style={s.card}>
-          <Text style={s.sectionTitle}>All Professors</Text>
-          <View style={s.tableHeader}>
-            <Text style={[s.th, { flex: 2 }]}>Name</Text>
-            <Text style={[s.th, { flex: 2 }]}>Email</Text>
-            <Text style={[s.th, { flex: 1, textAlign: 'center' }]}>Courses</Text>
-            <Text style={[s.th, { flex: 1, textAlign: 'center' }]}>Pending</Text>
-            <Text style={[s.th, { flex: 1, textAlign: 'center' }]}>Support</Text>
-          </View>
-          {professors.length === 0 ? (
-            <Text style={s.empty}>No professors found.</Text>
-          ) : (
-            professors.map((p, i) => (
+      {/* ── All Professors table ── */}
+      <View style={s.card}>
+        <Text style={s.sectionTitle}>All Professors</Text>
+        {loading ? (
+          <ActivityIndicator size="large" color={C.forest} style={{ marginVertical: 20 }} />
+        ) : (
+          <>
+            <View style={s.tableHeader}>
+              <Text style={[s.th, { flex: 2 }]}>Name</Text>
+              <Text style={[s.th, { flex: 2 }]}>Email</Text>
+              <Text style={[s.th, { flex: 1, textAlign: 'center' }]}>Courses</Text>
+              <Text style={[s.th, { flex: 1, textAlign: 'center' }]}>Support</Text>
+            </View>
+            {professors.length === 0 ? (
+              <Text style={s.emptyTxt}>No professors found.</Text>
+            ) : professors.map((p, i) => (
               <View key={p.id} style={[s.tableRow, i % 2 === 0 && s.tableRowAlt]}>
-                <Text style={[s.td, { flex: 2, fontWeight: '600' }]}>{p.full_name}</Text>
-                <Text style={[s.td, { flex: 2, color: C.muted }]}>{p.email}</Text>
+                <Text style={[s.td, { flex: 2, fontWeight: '600' }]} numberOfLines={1}>{p.full_name}</Text>
+                <Text style={[s.td, { flex: 2, color: C.inkMid }]} numberOfLines={1}>{p.email}</Text>
                 <Text style={[s.td, { flex: 1, textAlign: 'center' }]}>{p.courses_count}</Text>
-                <Text style={[s.td, { flex: 1, textAlign: 'center' }]}>{p.pending_items}</Text>
                 <View style={{ flex: 1, alignItems: 'center' }}>
                   <View style={[s.badge, p.needs_support && s.badgeWarn]}>
-                    <Text style={[s.badgeText, p.needs_support && s.badgeTextWarn]}>
+                    <Text style={[s.badgeTxt, p.needs_support && s.badgeTxtWarn]}>
                       {p.needs_support ? 'Yes' : 'No'}
                     </Text>
                   </View>
                 </View>
               </View>
-            ))
-          )}
+            ))}
+          </>
+        )}
+      </View>
+
+      {/* ── Action comment modal ── */}
+      <Modal
+        visible={!!actionModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setActionModal(null)}
+      >
+        <View style={m.overlay}>
+          <View style={m.modal}>
+            <Text style={m.title}>
+              {actionModal?.mode === 'decline' ? '✕ Decline Submission' : '✏ Request Changes'}
+            </Text>
+            {actionModal && (
+              <Text style={m.sub}>
+                {actionModal.sub.course_name} · {actionModal.sub.professor_name}
+              </Text>
+            )}
+            <TextInput
+              style={m.input}
+              placeholder={
+                actionModal?.mode === 'decline'
+                  ? 'Explain what is wrong so the professor knows what to fix…'
+                  : 'Describe the changes needed…'
+              }
+              placeholderTextColor={C.inkSoft}
+              value={actionText}
+              onChangeText={setActionText}
+              multiline
+              numberOfLines={5}
+              textAlignVertical="top"
+            />
+            <View style={m.actions}>
+              <TouchableOpacity style={m.btnCancel} onPress={() => setActionModal(null)}>
+                <Text style={m.btnCancelTxt}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[m.btnSubmit, {
+                  backgroundColor: actionModal?.mode === 'decline' ? C.red : C.forest,
+                }]}
+                onPress={handleActionSubmit}
+                disabled={actionLoading}
+              >
+                {actionLoading
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Text style={m.btnSubmitTxt}>
+                      {actionModal?.mode === 'decline' ? 'Decline' : 'Send Request'}
+                    </Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
-      )}
+      </Modal>
     </ScrollView>
   );
 };
 
 const s = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: C.bg },
-  content:      { padding: 20, paddingBottom: 40 },
-  pageTitle:    { fontSize: 22, fontWeight: '800', color: C.text, marginBottom: 16 },
+  root:         { flex: 1, backgroundColor: C.mist },
+  content:      { padding: 16, paddingBottom: 48 },
+  pageTitle:    { fontSize: 22, fontWeight: '800', color: C.forest, marginBottom: 16 },
   tilesRow:     { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 },
   tile:         { flex: 1, minWidth: 130, backgroundColor: C.card, borderWidth: 1, borderLeftWidth: 3, borderColor: C.border, borderRadius: 10, padding: 12, gap: 4 },
-  tileVal:      { fontSize: 28, fontWeight: '900' },
-  tileLbl:      { fontSize: 11, color: C.muted, fontWeight: '500' },
-  actionMsg:    { backgroundColor: C.green50, borderWidth: 1, borderColor: C.green600 + '50', borderRadius: 8, padding: 10, marginBottom: 12 },
-  actionMsgText:{ fontSize: 13, color: C.green700, fontWeight: '600' },
+  tileVal:      { fontSize: 26, fontWeight: '900' },
+  tileLbl:      { fontSize: 11, color: C.inkMid, fontWeight: '500' },
   card:         { backgroundColor: C.card, borderRadius: 14, borderWidth: 1, borderColor: C.border, padding: 16, marginBottom: 16 },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: C.text, marginBottom: 14 },
+  cardHead:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 },
+  sectionTitle: { fontSize: 15, fontWeight: '800', color: C.ink },
+  sectionSub:   { fontSize: 11, color: C.inkMid, marginTop: 2 },
+  toggleBtn:    { backgroundColor: C.mist, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: C.border },
+  toggleBtnTxt: { fontSize: 12, fontWeight: '600', color: C.forest },
+  empty:        { alignItems: 'center', paddingVertical: 28, gap: 8 },
+  emptyIcon:    { fontSize: 32 },
+  emptyTxt:     { fontSize: 13, color: C.inkMid },
+
+  // Submission card
+  subCard:      { borderWidth: 1, borderColor: C.border, borderRadius: 10, padding: 12, marginBottom: 10, gap: 8 },
+  subTop:       { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  subFileIcon:  { fontSize: 22, marginTop: 1 },
+  subCourse:    { fontSize: 13, fontWeight: '700', color: C.ink },
+  subMeta:      { fontSize: 11, color: C.inkMid, marginTop: 2 },
+  statusChip:   { borderRadius: 8, paddingHorizontal: 9, paddingVertical: 4 },
+  statusChipTxt:{ fontSize: 10, fontWeight: '700' },
+  subInfo:      { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  subInfoTxt:   { fontSize: 11, color: C.inkMid },
+  subFileName:  { fontSize: 11, color: C.blue },
+  reasonBox:    { backgroundColor: '#F9FAFB', borderRadius: 8, padding: 8, borderLeftWidth: 3, borderLeftColor: C.amber },
+  reasonLabel:  { fontSize: 10, fontWeight: '800', color: C.amber, marginBottom: 2 },
+  reasonText:   { fontSize: 12, color: C.ink, lineHeight: 17 },
+  subActions:   { flexDirection: 'row', gap: 8, marginTop: 2 },
+  btnDecline:   { flex: 1, paddingVertical: 9, borderRadius: 8, alignItems: 'center', backgroundColor: C.redBg, borderWidth: 1, borderColor: C.red },
+  btnDeclineTxt:{ fontSize: 12, fontWeight: '700', color: C.red },
+  btnChanges:   { flex: 1, paddingVertical: 9, borderRadius: 8, alignItems: 'center', backgroundColor: C.purpleBg, borderWidth: 1, borderColor: C.purple },
+  btnChangesTxt:{ fontSize: 12, fontWeight: '700', color: C.purple },
+  btnApprove:   { flex: 1, paddingVertical: 9, borderRadius: 8, alignItems: 'center', backgroundColor: C.forest },
+  btnApproveTxt:{ fontSize: 12, fontWeight: '700', color: '#fff' },
+
+  // Table
   tableHeader:  { flexDirection: 'row', paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: C.border, marginBottom: 4 },
   tableRow:     { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
-  tableRowAlt:  { backgroundColor: C.bg, borderRadius: 6 },
-  th:           { fontSize: 11, fontWeight: '700', color: C.muted, textTransform: 'uppercase', letterSpacing: 0.6 },
-  td:           { fontSize: 13, color: C.text },
+  tableRowAlt:  { backgroundColor: C.mist, borderRadius: 6 },
+  th:           { fontSize: 10, fontWeight: '700', color: C.inkMid, textTransform: 'uppercase', letterSpacing: 0.6 },
+  td:           { fontSize: 13, color: C.ink },
   badge:        { backgroundColor: C.green50, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
-  badgeWarn:    { backgroundColor: '#fef3cd' },
-  badgeText:    { fontSize: 11, fontWeight: '700', color: C.green600 },
-  badgeTextWarn:{ color: C.amber },
-  empty:        { fontSize: 13, color: C.muted, paddingVertical: 12 },
-  approvalRow:  { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.border },
-  fileIcon:     { fontSize: 28 },
-  approvalBody: { flex: 1, gap: 3 },
-  approvalDoc:  { fontSize: 13, fontWeight: '700', color: C.text },
-  approvalProf: { fontSize: 12, color: C.muted },
-  approvalDate: { fontSize: 11, color: C.soft },
-  approvalBtns: { gap: 6 },
-  approveBtn:   { backgroundColor: C.green600, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
-  approveBtnText:{ fontSize: 12, fontWeight: '700', color: '#fff' },
-  declineBtn:   { backgroundColor: '#fbeeee', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
-  declineBtnText:{ fontSize: 12, fontWeight: '700', color: C.red },
-  declineForm:  { backgroundColor: '#fbeeee', borderRadius: 10, padding: 12, marginBottom: 8, gap: 8 },
-  declineInput: { backgroundColor: '#fff', borderWidth: 1, borderColor: C.border, borderRadius: 8, padding: 10, fontSize: 13, color: C.text, minHeight: 60 },
-  declineFormBtns:{ flexDirection: 'row', gap: 12, alignItems: 'center' },
-  declineConfirm:{ backgroundColor: C.red, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8 },
-  declineConfirmText: { fontSize: 12, fontWeight: '700', color: '#fff' },
-  cancelText:   { fontSize: 12, color: C.muted },
+  badgeWarn:    { backgroundColor: C.amberBg },
+  badgeTxt:     { fontSize: 11, fontWeight: '700', color: C.forest },
+  badgeTxtWarn: { color: C.amber },
+});
+
+const m = StyleSheet.create({
+  overlay:      { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modal:        { backgroundColor: C.card, borderRadius: 16, padding: 22, width: '100%', maxWidth: 500, gap: 12 },
+  title:        { fontSize: 16, fontWeight: '800', color: C.ink },
+  sub:          { fontSize: 12, color: C.inkMid },
+  input:        { borderWidth: 1, borderColor: C.border, borderRadius: 10, padding: 12, fontSize: 13, color: C.ink, minHeight: 110 },
+  actions:      { flexDirection: 'row', gap: 10 },
+  btnCancel:    { flex: 1, paddingVertical: 13, borderRadius: 10, alignItems: 'center', backgroundColor: '#F3F4F6' },
+  btnCancelTxt: { fontWeight: '600', color: C.inkMid, fontSize: 13 },
+  btnSubmit:    { flex: 1, paddingVertical: 13, borderRadius: 10, alignItems: 'center' },
+  btnSubmitTxt: { fontWeight: '700', color: '#fff', fontSize: 13 },
 });
 
 export default AdminProfessorsScreen;

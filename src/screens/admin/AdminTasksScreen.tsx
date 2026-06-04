@@ -4,20 +4,21 @@ import {
 } from 'react-native';
 import { getAdminTasksList } from '../../services/supabase';
 import { AdminTask } from '../../types';
+import { Green, Ink, Tint } from '../../theme';
 
 const C = {
-  green50:  '#f0f6ef',
-  green600: '#2a8a4d',
-  green700: '#1d6e3a',
-  text:     '#1a2418',
-  muted:    '#6b7264',
-  soft:     '#8e948a',
-  border:   '#e4ebe2',
-  borderSt: '#d3ddd0',
-  red:      '#d94343',
-  amber:    '#d99a1f',
-  card:     '#ffffff',
-  bg:       '#f5f9f3',
+  green50:  Green[50],
+  green600: Green[600],
+  green700: Green[700],
+  text:     Ink.base,
+  muted:    Ink[3],
+  soft:     Ink[4],
+  border:   Ink.line,
+  borderSt: Ink.line2,
+  red:      Tint.rose.ink,
+  amber:    Tint.sun.ink,
+  card:     Ink.surface,
+  bg:       Ink.bg,
 };
 
 const priorityColor: Record<string, string> = {
@@ -172,40 +173,40 @@ const AdminTasksScreen: React.FC = () => {
 };
 
 const ts = StyleSheet.create({
-  row:         { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.border },
+  row:         { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: C.border },
   rowDone:     { opacity: 0.6 },
-  checkbox:    { width: 20, height: 20, borderRadius: 5, borderWidth: 2, borderColor: C.borderSt, alignItems: 'center', justifyContent: 'center' },
-  checkboxDone:{ backgroundColor: C.green600, borderColor: C.green600 },
-  checkMark:   { color: '#fff', fontSize: 12, fontWeight: '700' },
-  body:        { flex: 1, gap: 2 },
-  title:       { fontSize: 13, color: C.text, fontWeight: '500' },
+  checkbox:    { width: 20, height: 20, borderRadius: 6, borderWidth: 1.6, borderColor: C.borderSt, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
+  checkboxDone:{ backgroundColor: Green[500], borderColor: Green[500] },
+  checkMark:   { color: '#fff', fontFamily: 'Montserrat-Bold', fontSize: 11 },
+  body:        { flex: 1, gap: 3 },
+  title:       { fontFamily: 'Montserrat-SemiBold', fontSize: 13, color: C.text, lineHeight: 18 },
   textDone:    { textDecorationLine: 'line-through', color: C.soft },
-  due:         { fontSize: 11, color: C.soft },
-  badge:       { borderRadius: 4, paddingHorizontal: 7, paddingVertical: 3 },
-  badgeText:   { fontSize: 10, fontWeight: '700' },
+  due:         { fontFamily: 'Montserrat-Medium', fontSize: 11, color: C.soft },
+  badge:       { borderRadius: 5, paddingHorizontal: 7, paddingVertical: 3 },
+  badgeText:   { fontFamily: 'Montserrat-ExtraBold', fontSize: 9.5, letterSpacing: 0.6 },
   deleteBtn:   { padding: 4 },
-  deleteText:  { fontSize: 14, color: C.soft },
+  deleteText:  { fontFamily: 'Montserrat-Medium', fontSize: 14, color: C.soft },
 });
 
 const s = StyleSheet.create({
   container:    { flex: 1, backgroundColor: C.bg },
   content:      { padding: 20, paddingBottom: 40 },
-  pageTitle:    { fontSize: 22, fontWeight: '800', color: C.text, marginBottom: 16 },
+  pageTitle:    { fontFamily: 'Montserrat-Bold', fontSize: 22, color: C.text, marginBottom: 16, letterSpacing: -0.5 },
   tabs:         { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  tab:          { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: C.card, borderWidth: 1, borderColor: C.border },
-  tabActive:    { backgroundColor: C.green600, borderColor: C.green600 },
-  tabText:      { fontSize: 12, color: C.muted, fontWeight: '600' },
+  tab:          { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999, backgroundColor: C.card, borderWidth: 1, borderColor: C.border },
+  tabActive:    { backgroundColor: Green[700], borderColor: Green[700] },
+  tabText:      { fontFamily: 'Montserrat-SemiBold', fontSize: 12, color: C.muted },
   tabTextActive:{ color: '#fff' },
-  card:         { backgroundColor: C.card, borderRadius: 14, borderWidth: 1, borderColor: C.border, padding: 16, marginBottom: 16 },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: C.text, marginBottom: 12 },
-  empty:        { fontSize: 13, color: C.muted, textAlign: 'center', marginVertical: 30 },
-  input:        { borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: C.text, backgroundColor: C.bg, marginBottom: 12 },
+  card:         { backgroundColor: C.card, borderRadius: 18, borderWidth: 1, borderColor: C.border, padding: 22, marginBottom: 18 },
+  sectionTitle: { fontFamily: 'Montserrat-Bold', fontSize: 15, color: C.text, marginBottom: 14, letterSpacing: -0.1 },
+  empty:        { fontFamily: 'Montserrat-Medium', fontSize: 13, color: C.muted, textAlign: 'center', marginVertical: 30 },
+  input:        { borderWidth: 1, borderColor: C.border, borderRadius: 9, paddingHorizontal: 12, paddingVertical: 10, fontFamily: 'Montserrat-Medium', fontSize: 13, color: C.text, backgroundColor: '#fafcfa', marginBottom: 12 },
   priorityRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  priorityLabel:{ fontSize: 12, color: C.muted, fontWeight: '600' },
-  priorityBtn:  { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6, borderWidth: 1, borderColor: C.border, backgroundColor: C.bg },
-  priorityBtnText: { fontSize: 12, color: C.muted, fontWeight: '600' },
-  addBtn:       { backgroundColor: C.green600, borderRadius: 8, padding: 12, alignItems: 'center' },
-  addBtnText:   { color: '#fff', fontSize: 13, fontWeight: '700' },
+  priorityLabel:{ fontFamily: 'Montserrat-SemiBold', fontSize: 12, color: C.muted },
+  priorityBtn:  { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: C.border, backgroundColor: C.bg },
+  priorityBtnText: { fontFamily: 'Montserrat-SemiBold', fontSize: 12, color: C.muted },
+  addBtn:       { backgroundColor: Green[700], borderRadius: 10, padding: 13, alignItems: 'center' },
+  addBtnText:   { fontFamily: 'Montserrat-Bold', color: '#fff', fontSize: 13 },
 });
 
 export default AdminTasksScreen;

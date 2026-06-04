@@ -4,6 +4,9 @@ export interface Profile {
   full_name: string;
   role: 'professor' | 'administrator';
   created_at?: string;
+  accepted_terms?: boolean;
+  accepted_terms_at?: string | null;
+  terms_version?: string | null;
 }
 
 export interface Course {
@@ -34,6 +37,9 @@ export interface Student {
   full_name: string;
   email: string;
   created_at?: string;
+  nationality?: string | null;
+  date_of_birth?: string | null;
+  description?: string | null;
 }
 
 // Matches course_enrollments table
@@ -109,16 +115,59 @@ export type DrawerParamList = {
   Home: undefined;
   Courses: undefined;
   Students: undefined;
+  StudentList: undefined;
+  CourseManagement: undefined;
+  HomeworkAssistance: undefined;
   QualityControl: undefined;
   Warnings: undefined;
+  News: undefined;
+  Calendar: undefined;
   Profile: undefined;
   Settings: undefined;
 };
 
+// ── News feature types ────────────────────────────────────────
+export interface NewsArticle {
+  id: string;
+  title: string;
+  url: string;
+  sourceName: string;
+  publishedAt: string;
+  relatedCourseId?: string;
+  relatedCourseName: string;
+  topicKeyword?: string;
+  snippet?: string;
+  isPinned?: boolean;
+}
+
+export interface NewsPreference {
+  id?: string;
+  professor_id?: string;
+  source_name: string;
+  source_url: string | null;
+  is_enabled: boolean;
+}
+
+export interface PinnedArticle {
+  id: string;
+  professor_id: string;
+  course_id?: string | null;
+  course_name: string;
+  article_title: string;
+  article_url: string;
+  source_name: string;
+  published_at?: string | null;
+  topic_keyword?: string | null;
+  pinned_at: string;
+  created_at: string;
+}
+
 export type AdminDrawerParamList = {
   AdminDashboard: undefined;
   AdminStats: undefined;
-  AdminProfessors: undefined;
+  AdminStudentCoordination: undefined;
+  AdminStudentList: undefined;
+  AdminAccreditation: undefined;
   AdminOpenDay: undefined;
   AdminCalendar: undefined;
   AdminTasks: undefined;
@@ -170,6 +219,19 @@ export interface ProfessorOverview {
   needs_support: boolean;
 }
 
+export interface OpenDayItem {
+  id: string;
+  institution_id?: string | null;
+  title: string;
+  description?: string | null;
+  icon_name?: string | null;
+  linked_route?: string | null;
+  display_order?: number;
+  is_visible?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface OpenDayStat {
   total_registrations: number;
   countries_count: number;
@@ -191,9 +253,16 @@ export interface OpenDayRegistration {
 
 export interface OpenDayAmbassador {
   id: string;
-  name: string;
+  full_name: string;
+  country: string;
+  program: string;
+  email: string;
+  phone?: string | null;
   role: string;
-  initials: string;
+  photo_url?: string | null;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface AdminNewsItem {
@@ -220,3 +289,45 @@ export interface AdminKpi {
   direction: 'up' | 'down';
   tone: 'good' | 'info' | 'warn' | 'danger';
 }
+
+// ── Institution settings ───────────────────────────────────────
+export type AccreditationType = 'AACSB' | 'EQUIS' | 'AMBA';
+
+export interface AcademicPeriod {
+  id: string;
+  name: string;
+  duration_value: number;
+  duration_unit: 'weeks' | 'months';
+}
+
+export interface InstitutionSettings {
+  id: string;
+  name: string;
+  country: string;
+  city: string;
+  address: string;
+  accreditation: AccreditationType;
+  programs: string[];
+  academic_periods: AcademicPeriod[];
+  setup_completed: boolean;
+  setup_completed_by?: string;
+  setup_completed_at?: string;
+  locked: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export const ALL_PROGRAMS = [
+  'BBA',
+  'Bachelor in Business/Management',
+  'Bachelor in Hospitality Management',
+  'MBA',
+  'MSc in Management',
+  'MSc in Finance',
+  'MSc in Marketing',
+  'Master in International Business',
+  'Master in Management',
+  'DBA',
+  'PhD in Business/Management',
+  'Executive Education',
+] as const;

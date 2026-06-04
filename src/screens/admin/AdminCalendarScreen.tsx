@@ -3,24 +3,27 @@ import {
   View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity,
   Modal, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
-import { getAdminCalendarEvents } from '../../services/supabase';
+import { getAdminCalendarEvents, createAdminCalendarEvent } from '../../services/supabase';
+import { notifyAllAdmins } from '../../services/notificationService';
 import { AdminCalendarEvent } from '../../types';
+import { normalizeDateInput, normalizeTimeInput } from '../../utils/calendarInput';
+import { Green, Ink, Tint } from '../../theme';
 
 const C = {
-  green50:  '#f0f6ef',
-  green100: '#e2efe5',
-  green600: '#2a8a4d',
-  green700: '#1d6e3a',
-  text:     '#1a2418',
-  muted:    '#6b7264',
-  soft:     '#8e948a',
-  border:   '#e4ebe2',
-  red:      '#d94343',
-  amber:    '#d99a1f',
-  blue:     '#3b6fd1',
-  purple:   '#7a5acc',
-  card:     '#ffffff',
-  bg:       '#f5f9f3',
+  green50:  Green[50],
+  green100: Green[100],
+  green600: Green[600],
+  green700: Green[700],
+  text:     Ink.base,
+  muted:    Ink[3],
+  soft:     Ink[4],
+  border:   Ink.line,
+  red:      Tint.rose.ink,
+  amber:    Tint.sun.ink,
+  blue:     Tint.sky.ink,
+  purple:   Tint.violet.ink,
+  card:     Ink.surface,
+  bg:       Ink.bg,
 };
 
 type FilterType = 'all' | 'meeting' | 'deadline' | 'event';
@@ -47,6 +50,10 @@ const AdminCalendarScreen: React.FC = () => {
   const [loading, setLoading]   = useState(true);
   const [filter, setFilter]     = useState<FilterType>('all');
 
+  // ── Selected day / daily-details state ─────────────────────────────────────
+  const [selectedDate, setSelectedDate] = useState('');   // 'YYYY-MM-DD'
+  const [showDayDetails, setShowDayDetails] = useState(false);
+
   // ── Add event modal state ──────────────────────────────────────────────────
   const [showModal, setShowModal] = useState(false);
   const [newTitle, setNewTitle]   = useState('');
@@ -56,35 +63,80 @@ const AdminCalendarScreen: React.FC = () => {
   const [newLocation, setNewLocation] = useState('');
   const [newType, setNewType]     = useState<EventType>('meeting');
   const [formError, setFormError] = useState('');
+  const [saving, setSaving]       = useState(false);
 
   const resetForm = () => {
     setNewTitle(''); setNewDate(''); setNewTime('');
     setNewEndTime(''); setNewLocation(''); setNewType('meeting'); setFormError('');
   };
 
-  const handleAddEvent = () => {
+  const handleAddEvent = async () => {
+    if (saving) return;
     if (!newTitle.trim()) { setFormError('Please enter a title.'); return; }
     if (!newDate.trim())  { setFormError('Please enter a date (e.g. 2026-05-20).'); return; }
     if (!newTime.trim())  { setFormError('Please enter a start time (e.g. 09:00).'); return; }
-    const ev: AdminCalendarEvent = {
-      id:       `ev_${Date.now()}`,
-      title:    newTitle.trim(),
-      date:     newDate.trim(),
-      time:     newTime.trim(),
-      end_time: newEndTime.trim() || undefined,
-      location: newLocation.trim() || 'TBD',
-      type:     newType,
-      color:    TYPE_DOT_COLORS[newType],
-    };
-    setEvents(prev => [...prev, ev]);
-    // TODO: await supabase.from('admin_calendar').insert(ev);
-    resetForm();
-    setShowModal(false);
+
+    // Normalize flexible date / time input to the format the app + Supabase use.
+    const normDate = normalizeDateInput(newDate);
+    if (!normDate) { setFormError('Please enter a valid date, e.g. 2026-05-20 or 04/06/26.'); return; }
+    const normTime = normalizeTimeInput(newTime);
+    if (!normTime) { setFormError('Please enter a valid start time, e.g. 9, 9:30 or 09:30.'); return; }
+    let normEndTime: string | undefined;
+    if (newEndTime.trim()) {
+      const e = normalizeTimeInput(newEndTime);
+      if (!e) { setFormError('Please enter a valid end time, e.g. 10 or 10:30.'); return; }
+      normEndTime = e;
+    }
+
+    setFormError('');
+    setSaving(true);
+    try {
+      // Persist to Supabase first and get the real saved row (with its DB id).
+      const saved = await createAdminCalendarEvent({
+        title:    newTitle.trim(),
+        date:     normDate,
+        time:     normTime,
+        end_time: normEndTime,
+        location: newLocation.trim() || 'TBD',
+        type:     newType,
+        color:    TYPE_DOT_COLORS[newType],
+      });
+      // Only after a successful insert: update local state with the saved row…
+      setEvents(prev => [...prev, saved]);
+      // …and fire the admin notification, carrying the real DB id for redirect.
+      notifyAllAdmins({
+        title:   '📅 New Calendar Event',
+        message: `"${saved.title}" was added to the calendar on ${saved.date}${saved.time ? ` at ${saved.time}` : ''}.`,
+        type:    'calendar_event',
+        relatedId:   saved.id,
+        relatedType: 'calendar_event',
+      });
+      resetForm();
+      setShowModal(false);
+    } catch (err) {
+      console.error('Failed to save admin calendar event:', err);
+      setFormError('Could not save the event. Please check your connection and try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const today = new Date();
-  const year  = today.getFullYear();
-  const month = today.getMonth();
+  // Month/year currently shown in the grid (defaults to the current month).
+  const [viewYear, setViewYear]   = useState(today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(today.getMonth());   // 0–11
+  const year  = viewYear;
+  const month = viewMonth;
+
+  const stepMonth = (delta: number) => {
+    let m = viewMonth + delta;
+    let y = viewYear;
+    if (m < 0)  { m = 11; y -= 1; }
+    if (m > 11) { m = 0;  y += 1; }
+    setViewMonth(m);
+    setViewYear(y);
+  };
+  const stepYear = (delta: number) => setViewYear(y => y + delta);
 
   useEffect(() => {
     getAdminCalendarEvents()
@@ -108,6 +160,23 @@ const AdminCalendarScreen: React.FC = () => {
       .filter(e => new Date(e.date).getMonth() === month && new Date(e.date).getFullYear() === year)
       .map(e => new Date(e.date).getDate())
   );
+
+  // Build a 'YYYY-MM-DD' string for a given day number in the displayed month.
+  const dayToDateStr = (d: number) =>
+    `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+  // Events for the currently selected day (dated items only — admin tasks carry
+  // no date field, so they are intentionally not listed here).
+  const selectedDayEvents = events
+    .filter(e => e.date === selectedDate)
+    .slice()
+    .sort((a, b) => a.time.localeCompare(b.time));
+
+  const prettyDate = (iso: string) => {
+    if (!iso) return '';
+    const d = new Date(iso + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  };
 
   const filtered = filter === 'all' ? events : events.filter(e => e.type === filter);
 
@@ -144,7 +213,7 @@ const AdminCalendarScreen: React.FC = () => {
             />
 
             {/* Date */}
-            <Text style={s.fieldLabel}>Date * (YYYY-MM-DD)</Text>
+            <Text style={s.fieldLabel}>Date * (e.g. 2026-05-20 or 04/06/26)</Text>
             <TextInput
               style={s.input}
               value={newDate}
@@ -157,7 +226,7 @@ const AdminCalendarScreen: React.FC = () => {
             {/* Time row */}
             <View style={s.timeRow}>
               <View style={{ flex: 1 }}>
-                <Text style={s.fieldLabel}>Start Time * (HH:MM)</Text>
+                <Text style={s.fieldLabel}>Start Time * (e.g. 9, 9:30)</Text>
                 <TextInput
                   style={s.input}
                   value={newTime}
@@ -168,7 +237,7 @@ const AdminCalendarScreen: React.FC = () => {
                 />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={s.fieldLabel}>End Time (optional)</Text>
+                <Text style={s.fieldLabel}>End Time (optional, e.g. 10:30)</Text>
                 <TextInput
                   style={s.input}
                   value={newEndTime}
@@ -214,17 +283,72 @@ const AdminCalendarScreen: React.FC = () => {
               <TouchableOpacity style={s.cancelBtn} onPress={() => { resetForm(); setShowModal(false); }}>
                 <Text style={s.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={s.saveBtn} onPress={handleAddEvent}>
-                <Text style={s.saveBtnText}>Save Event</Text>
+              <TouchableOpacity style={s.saveBtn} onPress={handleAddEvent} disabled={saving}>
+                <Text style={s.saveBtnText}>{saving ? 'Saving…' : 'Save Event'}</Text>
               </TouchableOpacity>
             </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
 
+      {/* Daily details modal */}
+      <Modal visible={showDayDetails} animationType="slide" transparent onRequestClose={() => setShowDayDetails(false)}>
+        <View style={s.modalOverlay}>
+          <View style={s.modalCard}>
+            <Text style={s.modalTitle}>{prettyDate(selectedDate)}</Text>
+            {selectedDayEvents.length === 0 ? (
+              <Text style={s.empty}>No events or plans for this day.</Text>
+            ) : (
+              selectedDayEvents.map(ev => {
+                const tb = typeBadge(ev.type);
+                return (
+                  <View key={ev.id} style={s.evRow}>
+                    <View style={s.evTimeCol}>
+                      <Text style={s.evTime}>{ev.time}</Text>
+                      {ev.end_time && <Text style={s.evEndTime}>{ev.end_time}</Text>}
+                    </View>
+                    <View style={[s.evAccent, { backgroundColor: ev.color ?? C.green600 }]} />
+                    <View style={s.evBody}>
+                      <Text style={s.evTitle}>{ev.title}</Text>
+                      <Text style={s.evLoc}>📍 {ev.location}</Text>
+                      <View style={s.evFooter}>
+                        <View style={[s.badge, { backgroundColor: tb.bg }]}>
+                          <Text style={[s.badgeText, { color: tb.color }]}>{ev.type.toUpperCase()}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })
+            )}
+            <TouchableOpacity style={[s.cancelBtn, { marginTop: 18 }]} onPress={() => setShowDayDetails(false)}>
+              <Text style={s.cancelBtnText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* Mini month grid */}
       <View style={s.card}>
-        <Text style={s.monthTitle}>{MONTHS[month]} {year}</Text>
+        <View style={s.monthNav}>
+          <View style={s.monthNavSide}>
+            <TouchableOpacity style={s.navBtn} onPress={() => stepYear(-1)} accessibilityLabel="Previous year">
+              <Text style={s.navArrow}>«</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.navBtn} onPress={() => stepMonth(-1)} accessibilityLabel="Previous month">
+              <Text style={s.navArrow}>‹</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={s.monthTitle}>{MONTHS[month]} {year}</Text>
+          <View style={s.monthNavSide}>
+            <TouchableOpacity style={s.navBtn} onPress={() => stepMonth(1)} accessibilityLabel="Next month">
+              <Text style={s.navArrow}>›</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.navBtn} onPress={() => stepYear(1)} accessibilityLabel="Next year">
+              <Text style={s.navArrow}>»</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
         <View style={s.daysHeader}>
           {DAYS_OF_WEEK.map(d => (
             <Text key={d} style={s.dayLabel}>{d}</Text>
@@ -232,15 +356,20 @@ const AdminCalendarScreen: React.FC = () => {
         </View>
         <View style={s.grid}>
           {cells.map((day, idx) => {
-            const isToday = day === today.getDate();
+            const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
             const hasEvent = day !== null && eventDays.has(day);
+            const isSelected = day !== null && dayToDateStr(day) === selectedDate;
             return (
               <View key={idx} style={s.cellWrap}>
                 {day !== null ? (
-                  <View style={[s.cell, isToday && s.cellToday]}>
+                  <TouchableOpacity
+                    style={[s.cell, isToday && s.cellToday, isSelected && s.cellSelected]}
+                    activeOpacity={0.7}
+                    onPress={() => setSelectedDate(dayToDateStr(day))}
+                  >
                     <Text style={[s.cellText, isToday && s.cellTextToday]}>{day}</Text>
                     {hasEvent && <View style={[s.dot, isToday && s.dotToday]} />}
-                  </View>
+                  </TouchableOpacity>
                 ) : (
                   <View style={s.cell} />
                 )}
@@ -248,6 +377,13 @@ const AdminCalendarScreen: React.FC = () => {
             );
           })}
         </View>
+
+        {/* Day-details button — appears only after a day is selected */}
+        {selectedDate ? (
+          <TouchableOpacity style={s.dayDetailsBtn} activeOpacity={0.8} onPress={() => setShowDayDetails(true)}>
+            <Text style={s.dayDetailsBtnText}>📋 View {selectedDate}</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       {/* Filter tabs */}
@@ -331,13 +467,20 @@ const s = StyleSheet.create({
   saveBtn:      { flex: 2, paddingVertical: 13, borderRadius: 12, backgroundColor: C.green600, alignItems: 'center' },
   saveBtnText:  { fontSize: 14, fontWeight: '700', color: '#fff' },
   card:         { backgroundColor: C.card, borderRadius: 14, borderWidth: 1, borderColor: C.border, padding: 16, marginBottom: 16 },
-  monthTitle:   { fontSize: 16, fontWeight: '700', color: C.text, marginBottom: 12 },
+  monthNav:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  monthNavSide: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  navBtn:       { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: C.green50, borderWidth: 1, borderColor: C.green100 },
+  navArrow:     { fontSize: 16, fontWeight: '800', color: C.green700, lineHeight: 18 },
+  monthTitle:   { fontSize: 16, fontWeight: '700', color: C.text },
   daysHeader:   { flexDirection: 'row', marginBottom: 8 },
   dayLabel:     { flex: 1, textAlign: 'center', fontSize: 11, fontWeight: '700', color: C.muted },
   grid:         { flexDirection: 'row', flexWrap: 'wrap' },
   cellWrap:     { width: `${100 / 7}%` as any, alignItems: 'center', marginBottom: 4 },
   cell:         { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   cellToday:    { backgroundColor: C.green600 },
+  cellSelected: { borderWidth: 2, borderColor: C.green600 },
+  dayDetailsBtn:    { marginTop: 14, alignSelf: 'flex-start', backgroundColor: C.green50, borderWidth: 1, borderColor: C.green100, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 },
+  dayDetailsBtnText:{ fontSize: 13, fontWeight: '700', color: C.green700 },
   cellText:     { fontSize: 13, color: C.text },
   cellTextToday:{ color: '#fff', fontWeight: '700' },
   dot:          { width: 4, height: 4, borderRadius: 2, backgroundColor: C.green600, marginTop: 1 },

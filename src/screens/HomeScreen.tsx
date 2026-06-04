@@ -1,33 +1,35 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, useWindowDimensions,
-  TouchableOpacity, TextInput,
+  TouchableOpacity, TextInput, ActivityIndicator, Linking,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import { mockMeetings, mockDeadlines, mockTasks } from '../mock';
 import { computeWarnings } from '../utils/warnings';
-import { Profile, Course, Task, TeacherStats, StudentWithEnrollments } from '../types';
-import { Colors, Spacing, Radius } from '../theme';
+import { Profile, Course, Task, TeacherStats, StudentWithEnrollments, NewsArticle } from '../types';
+import { Colors, Spacing, Radius, Green, Ink, Tint } from '../theme';
+import { fetchCourseNews, getProfessorNewsPreferences } from '../services/newsService';
+import CalendarWidget from '../components/CalendarWidget';
 
-// ─── Local colour tokens (matches HTML design) ───────────────────────────────
+// ─── Local colour tokens ─────────────────────────────────────────────────────
 const C = {
-  green50:  '#f0f6ef',
-  green100: '#e2efe5',
-  green600: '#2a8a4d',
-  green700: '#1d6e3a',
-  green900: '#0f4a26',
-  text:     '#1a2418',
-  muted:    '#6b7264',
-  soft:     '#8e948a',
-  border:   '#e4ebe2',
-  borderSt: '#d3ddd0',
-  red:      '#d94343',
-  amber:    '#d99a1f',
-  blue:     '#3b6fd1',
-  purple:   '#7a5acc',
-  card:     '#ffffff',
-  bg:       '#f5f9f3',
+  green50:  Green[50],
+  green100: Green[100],
+  green600: Green[600],
+  green700: Green[700],
+  green900: Green[900],
+  text:     Ink.base,
+  muted:    Ink[3],
+  soft:     Ink[4],
+  border:   Ink.line,
+  borderSt: Ink.line2,
+  red:      Tint.rose.ink,
+  amber:    Tint.sun.ink,
+  blue:     Tint.sky.ink,
+  purple:   Tint.violet.ink,
+  card:     Ink.surface,
+  bg:       Ink.bg,
 };
 
 // ─── Shared Card shell ────────────────────────────────────────────────────────
@@ -178,6 +180,10 @@ const PersonalCalendarCard: React.FC = () => {
           </View>
         </View>
       ))}
+      {/* Tap a day to see that day's events / deadlines */}
+      <View style={cal.widgetWrap}>
+        <CalendarWidget meetings={mockMeetings} deadlines={mockDeadlines} />
+      </View>
     </Card>
   );
 };
@@ -255,40 +261,75 @@ const TasksCard: React.FC<TasksCardProps> = ({ tasks, onTasksChange }) => {
   );
 };
 
-// ─── News ─────────────────────────────────────────────────────────────────────
-const NEWS_ITEMS = [
-  { title: 'New guidelines for assessment',   date: 'May 10', isNew: true,  thumb: 0 },
-  { title: 'Event: Education & AI Summit',    date: 'May 15', isNew: false, thumb: 1 },
-  { title: 'Policy update: Absence tracking', date: 'May 8',  isNew: false, thumb: 2 },
-  { title: 'Field-trip permission templates', date: 'May 6',  isNew: false, thumb: 3 },
-];
-const THUMB_COLORS = [
-  ['#d8e8d2', '#b9d5b0'],
-  ['#e6dfe5', '#c8bbc8'],
-  ['#e8dcc6', '#c9b48d'],
-  ['#d6e1ed', '#a7bdda'],
-];
+// ─── Course News Preview ──────────────────────────────────────────────────────
+const nwRelTime = (iso: string): string => {
+  const h = Math.floor((Date.now() - new Date(iso).getTime()) / 3_600_000);
+  if (h < 1) return 'Just now';
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+};
 
-const NewsCard: React.FC = () => (
-  <Card icon="📰" title="NEWS">
-    {NEWS_ITEMS.map((n, i) => (
-      <TouchableOpacity key={i} style={[nw.row, i > 0 && nw.rowBorder]} activeOpacity={0.7}>
-        <View style={[nw.thumb, { backgroundColor: THUMB_COLORS[n.thumb][0] }]}>
-          <View style={[nw.thumbInner, { backgroundColor: THUMB_COLORS[n.thumb][1] }]} />
+interface CourseNewsPreviewCardProps {
+  courses: Course[];
+  professorId: string;
+  onViewAll: () => void;
+}
+const CourseNewsPreviewCard: React.FC<CourseNewsPreviewCardProps> = ({ courses, professorId, onViewAll }) => {
+  const [articles, setArticles] = useState<NewsArticle[]>([]);
+  const [loading,  setLoading]  = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const prefs = await getProfessorNewsPreferences(professorId);
+        const { articles: fetched } = await fetchCourseNews(courses, professorId, prefs);
+        if (!cancelled) setArticles(fetched.slice(0, 3));
+      } catch { /* silent */ }
+      finally { if (!cancelled) setLoading(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [professorId, courses]);
+
+  const handleRead = async (url: string) => {
+    try {
+      if (await Linking.canOpenURL(url)) Linking.openURL(url);
+    } catch { /* silent */ }
+  };
+
+  return (
+    <Card icon="📰" title="COURSE NEWS" onViewAll={onViewAll}>
+      {loading ? (
+        <View style={nw.loadingRow}>
+          <ActivityIndicator color={C.green600} size="small" />
+          <Text style={nw.loadingText}>Loading course news…</Text>
         </View>
-        <View style={nw.body}>
-          <Text style={nw.title} numberOfLines={2}>{n.title}</Text>
-          <Text style={nw.date}>{n.date}</Text>
-        </View>
-        {n.isNew && (
-          <View style={nw.newPill}>
-            <Text style={nw.newPillText}>NEW</Text>
-          </View>
-        )}
-      </TouchableOpacity>
-    ))}
-  </Card>
-);
+      ) : articles.length === 0 ? (
+        <Text style={nw.empty}>No recent articles found for your courses.</Text>
+      ) : (
+        articles.map((a, i) => (
+          <TouchableOpacity
+            key={a.id}
+            style={[nw.row, i > 0 && nw.rowBorder]}
+            activeOpacity={0.75}
+            onPress={() => handleRead(a.url)}
+          >
+            <View style={nw.sourceBox}>
+              <Text style={nw.sourceLetter}>{a.sourceName.charAt(0)}</Text>
+            </View>
+            <View style={nw.body}>
+              <Text style={nw.title} numberOfLines={2}>{a.title}</Text>
+              <Text style={nw.meta}>{a.sourceName}  ·  {nwRelTime(a.publishedAt)}</Text>
+              {!!a.relatedCourseName && (
+                <Text style={nw.course} numberOfLines={1}>{a.relatedCourseName}</Text>
+              )}
+            </View>
+          </TouchableOpacity>
+        ))
+      )}
+    </Card>
+  );
+};
 
 // ─── Main HomeScreen ──────────────────────────────────────────────────────────
 interface Props {
@@ -367,7 +408,11 @@ const HomeScreen: React.FC<Props> = ({ profile, courses, teacherStats, students 
             teacherStats={teacherStats}
             onViewAll={() => navigation.navigate('Courses')}
           />
-          <NewsCard />
+          <CourseNewsPreviewCard
+            courses={courses}
+            professorId={profile.id}
+            onViewAll={() => navigation.navigate('News')}
+          />
         </View>
 
         {/* Right column */}
@@ -398,8 +443,8 @@ const cs = StyleSheet.create({
     backgroundColor: C.green50, alignItems: 'center', justifyContent: 'center',
   },
   cardIconText: { fontSize: 14 },
-  cardTitleText: { fontSize: 10.5, fontWeight: '700', color: C.text, letterSpacing: 1.2, textTransform: 'uppercase' },
-  viewAll: { fontSize: 12, fontWeight: '600', color: C.green700 },
+  cardTitleText: { fontFamily: 'Montserrat-Bold', fontSize: 10.5, color: C.text, letterSpacing: 1.2, textTransform: 'uppercase' },
+  viewAll: { fontFamily: 'Montserrat-SemiBold', fontSize: 12, color: C.green700 },
   cardBody: {},
 });
 
@@ -435,6 +480,7 @@ const cc = StyleSheet.create({
 // Calendar
 const cal = StyleSheet.create({
   sub: { fontSize: 11, color: C.muted, marginBottom: 10 },
+  widgetWrap: { marginTop: 12 },
   row: { flexDirection: 'row', alignItems: 'stretch', marginBottom: 6, gap: 8 },
   timeCol: { width: 52, paddingTop: 8 },
   time: { fontSize: 10, color: C.muted, lineHeight: 14 },
@@ -482,17 +528,22 @@ const tk = StyleSheet.create({
   addBtnText: { color: '#fff', fontWeight: '600', fontSize: 12 },
 });
 
-// News
+// Course news preview
 const nw = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
-  rowBorder: { borderTopWidth: 1, borderTopColor: C.border },
-  thumb: { width: 48, height: 36, borderRadius: 7, overflow: 'hidden', justifyContent: 'flex-end' },
-  thumbInner: { height: 10, opacity: 0.6 },
-  body: { flex: 1 },
-  title: { fontSize: 12.5, fontWeight: '600', color: C.text, lineHeight: 16 },
-  date: { fontSize: 10.5, color: C.muted, marginTop: 1 },
-  newPill: { backgroundColor: C.green600, borderRadius: 999, paddingHorizontal: 7, paddingVertical: 2 },
-  newPillText: { color: '#fff', fontSize: 9, fontWeight: '800', letterSpacing: 0.6 },
+  row:         { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 8 },
+  rowBorder:   { borderTopWidth: 1, borderTopColor: C.border },
+  sourceBox: {
+    width: 34, height: 34, borderRadius: 9,
+    backgroundColor: C.green700, alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  sourceLetter: { color: '#fff', fontWeight: '800', fontSize: 14 },
+  body:    { flex: 1 },
+  title:   { fontSize: 12.5, fontWeight: '600', color: C.text, lineHeight: 17, marginBottom: 2 },
+  meta:    { fontSize: 10.5, color: C.muted },
+  course:  { fontSize: 10.5, color: C.green700, fontWeight: '500', marginTop: 1 },
+  loadingRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 12 },
+  loadingText: { fontSize: 12, color: C.muted },
+  empty:   { fontSize: 12, color: C.muted, textAlign: 'center', paddingVertical: 16 },
 });
 
 // HomeScreen layout
@@ -504,8 +555,8 @@ const hs = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between',
     alignItems: 'flex-start', marginBottom: 14, flexWrap: 'wrap', gap: 8,
   },
-  greeting: { fontSize: 19, fontWeight: '700', color: C.text, letterSpacing: -0.2, marginBottom: 2 },
-  greetingSub: { fontSize: 12, color: C.muted },
+  greeting: { fontFamily: 'Montserrat-Bold', fontSize: 19, color: C.text, letterSpacing: -0.2, marginBottom: 2 },
+  greetingSub: { fontFamily: 'Montserrat-Medium', fontSize: 12, color: C.muted },
   topbarRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 
   alertChip: {

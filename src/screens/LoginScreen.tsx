@@ -43,7 +43,7 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
           <View style={styles.logoArea}>
             <Text style={styles.logoEmoji}>✋</Text>
             <Text style={styles.logoText}>High Five</Text>
-            <Text style={styles.logoSub}>Teacher Dashboard</Text>
+            <Text style={styles.logoTagline}>Smarter schools start here</Text>
           </View>
 
           <View style={styles.roleRow}>
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
   logoArea: { alignItems: 'center', marginBottom: Spacing.xl },
   logoEmoji: { fontSize: 48, marginBottom: Spacing.sm },
   logoText: { ...Typography.display, textAlign: 'center' },
-  logoSub: { ...Typography.body, textAlign: 'center' },
+  logoTagline: { fontSize: 28, fontWeight: '500', color: Colors.forest, textAlign: 'center', marginTop: 4 },
   roleRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg },
   roleBtn: {
     flex: 1, borderWidth: 1.5, borderColor: Colors.border,

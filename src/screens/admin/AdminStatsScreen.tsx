@@ -4,26 +4,24 @@ import {
 } from 'react-native';
 import { getStudentStats, getCourseEnrollmentStats } from '../../services/supabase';
 import { CourseEnrollmentStat } from '../../types';
+import { Green, Ink, Tint } from '../../theme';
 
 const C = {
-  green50:  '#f0f6ef',
-  green100: '#e2efe5',
-  green600: '#2a8a4d',
-  green700: '#1d6e3a',
-  text:     '#1a2418',
-  muted:    '#6b7264',
-  soft:     '#8e948a',
-  border:   '#e4ebe2',
-  red:      '#d94343',
-  amber:    '#d99a1f',
-  blue:     '#3b6fd1',
-  purple:   '#7a5acc',
-  card:     '#ffffff',
-  bg:       '#f5f9f3',
+  green50:  Green[50],
+  green100: Green[100],
+  green600: Green[600],
+  green700: Green[700],
+  text:     Ink.base,
+  muted:    Ink[3],
+  soft:     Ink[4],
+  border:   Ink.line,
+  red:      Tint.rose.ink,
+  amber:    Tint.sun.ink,
+  blue:     Tint.sky.ink,
+  purple:   Tint.violet.ink,
+  card:     Ink.surface,
+  bg:       Ink.bg,
 };
-
-// One color per bar (cycles if > 5 courses)
-const BAR_COLORS = [C.green600, C.blue, C.amber, C.red, C.purple, '#3bbfbf', '#e06b3a'];
 
 interface MetricCardProps {
   label: string; value: string; sub: string; color: string; bg: string;
@@ -36,10 +34,10 @@ const MetricCard: React.FC<MetricCardProps> = ({ label, value, sub, color, bg })
   </View>
 );
 const metricStyles = StyleSheet.create({
-  card:  { flex: 1, minWidth: 140, borderWidth: 1, borderRadius: 12, padding: 16, gap: 4 },
-  value: { fontSize: 36, fontWeight: '900' },
-  label: { fontSize: 13, fontWeight: '700', color: C.text },
-  sub:   { fontSize: 11, color: C.muted },
+  card:  { flex: 1, minWidth: 140, borderWidth: 1, borderRadius: 14, padding: 18, gap: 4 },
+  value: { fontFamily: 'Montserrat-Bold', fontSize: 36, letterSpacing: -1.5 },
+  label: { fontFamily: 'Montserrat-Bold', fontSize: 13, color: C.text },
+  sub:   { fontFamily: 'Montserrat-Medium', fontSize: 11, color: C.muted },
 });
 
 const AdminStatsScreen: React.FC = () => {
@@ -56,10 +54,6 @@ const AdminStatsScreen: React.FC = () => {
       .catch(() => setStats({ total: 0, atRisk: 0, avgGrade: 0, avgAttendance: 0, active: 0 }))
       .finally(() => setLoading(false));
   }, []);
-
-  // Top 5 courses for the bar chart
-  const topCourses = courseStats.slice(0, 5);
-  const maxCount = topCourses.length ? Math.max(...topCourses.map(c => c.students)) : 1;
 
   return (
     <ScrollView style={s.container} contentContainerStyle={s.content}>
@@ -101,27 +95,6 @@ const AdminStatsScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Bar chart — Top courses by enrollment */}
-      <View style={s.card}>
-        <Text style={s.sectionTitle}>Top Courses by Enrollment</Text>
-        {topCourses.length === 0 && !loading ? (
-          <Text style={s.empty}>No enrollment data yet.</Text>
-        ) : (
-          topCourses.map((c, i) => (
-            <View key={c.course_id} style={s.barRow}>
-              <Text style={s.barLabel} numberOfLines={1}>{c.course}</Text>
-              <View style={s.barTrack}>
-                <View style={[s.barFill, {
-                  width: `${Math.max(4, (c.students / maxCount) * 100)}%` as any,
-                  backgroundColor: BAR_COLORS[i % BAR_COLORS.length],
-                }]} />
-              </View>
-              <Text style={s.barCount}>{c.students}</Text>
-            </View>
-          ))
-        )}
-      </View>
-
       {/* Course enrollment table */}
       <View style={s.card}>
         <Text style={s.sectionTitle}>Course Enrollment Stats</Text>
@@ -161,25 +134,20 @@ const AdminStatsScreen: React.FC = () => {
 const s = StyleSheet.create({
   container:   { flex: 1, backgroundColor: C.bg },
   content:     { padding: 20, paddingBottom: 40 },
-  pageTitle:   { fontSize: 22, fontWeight: '800', color: C.text, marginBottom: 4 },
-  pageSub:     { fontSize: 13, color: C.muted, marginBottom: 20 },
+  pageTitle:   { fontFamily: 'Montserrat-Bold', fontSize: 22, color: C.text, marginBottom: 4, letterSpacing: -0.5 },
+  pageSub:     { fontFamily: 'Montserrat-Medium', fontSize: 13, color: C.muted, marginBottom: 20 },
   grid:        { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20 },
   gridWide:    { flexWrap: 'nowrap' },
-  card:        { backgroundColor: C.card, borderRadius: 14, borderWidth: 1, borderColor: C.border, padding: 16, marginBottom: 16 },
-  sectionTitle:{ fontSize: 15, fontWeight: '700', color: C.text, marginBottom: 14 },
-  barRow:      { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-  barLabel:    { width: 110, fontSize: 12, color: C.text },
-  barTrack:    { flex: 1, height: 10, backgroundColor: C.green100, borderRadius: 5 },
-  barFill:     { height: 10, borderRadius: 5 },
-  barCount:    { width: 36, fontSize: 12, color: C.muted, textAlign: 'right' },
+  card:        { backgroundColor: C.card, borderRadius: 18, borderWidth: 1, borderColor: C.border, padding: 22, marginBottom: 18 },
+  sectionTitle:{ fontFamily: 'Montserrat-Bold', fontSize: 15, color: C.text, marginBottom: 14, letterSpacing: -0.1 },
   tableHeader: { flexDirection: 'row', paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: C.border, marginBottom: 4 },
   tableRow:    { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
   tableRowAlt: { backgroundColor: C.bg, borderRadius: 6 },
-  th:          { fontSize: 11, fontWeight: '700', color: C.muted, textTransform: 'uppercase', letterSpacing: 0.6 },
-  td:          { fontSize: 13, color: C.text },
-  statusBadge: { borderRadius: 4, paddingHorizontal: 8, paddingVertical: 3 },
-  statusText:  { fontSize: 11, fontWeight: '700' },
-  empty:       { fontSize: 13, color: C.muted, paddingVertical: 12 },
+  th:          { fontFamily: 'Montserrat-Bold', fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: 0.6 },
+  td:          { fontFamily: 'Montserrat-Medium', fontSize: 13, color: C.text },
+  statusBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  statusText:  { fontFamily: 'Montserrat-Bold', fontSize: 11 },
+  empty:       { fontFamily: 'Montserrat-Medium', fontSize: 13, color: C.muted, paddingVertical: 12 },
 });
 
 export default AdminStatsScreen;

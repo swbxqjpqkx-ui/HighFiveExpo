@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, useWindowDimensions,
-  TouchableOpacity, TextInput, ActivityIndicator,
+  TouchableOpacity, TextInput, ActivityIndicator, Linking, Platform, Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import * as Location from 'expo-location';
@@ -9,52 +9,58 @@ import { Profile, AdminTask, AdminCalendarEvent, OpenDayStat } from '../../types
 import {
   getStudentStats, getOpenDayStats, getAdminCalendarEvents, getAdminTasksList,
 } from '../../services/supabase';
+import { useInstitution } from '../../context/InstitutionContext';
+import {
+  AdminNewsArticle, CATEGORY_COLORS, CATEGORY_LABELS,
+  getTopAdminNews, togglePinAdminArticle,
+} from '../../services/adminNewsService';
+import { Green, Ink, Tint } from '../../theme';
 
 const C = {
-  green50:  '#f0f6ef',
-  green100: '#e2efe5',
-  green600: '#2a8a4d',
-  green700: '#1d6e3a',
-  green900: '#0f4a26',
-  text:     '#1a2418',
-  muted:    '#6b7264',
-  soft:     '#8e948a',
-  border:   '#e4ebe2',
-  borderSt: '#d3ddd0',
-  red:      '#d94343',
-  amber:    '#d99a1f',
-  blue:     '#3b6fd1',
-  purple:   '#7a5acc',
-  card:     '#ffffff',
-  bg:       '#f5f9f3',
+  green50:  Green[50],
+  green100: Green[100],
+  green600: Green[600],
+  green700: Green[700],
+  green900: Green[900],
+  text:     Ink.base,
+  muted:    Ink[3],
+  soft:     Ink[4],
+  border:   Ink.line,
+  borderSt: Ink.line2,
+  red:      Tint.rose.ink,
+  amber:    Tint.sun.ink,
+  blue:     Tint.sky.ink,
+  purple:   Tint.violet.ink,
+  card:     Ink.surface,
+  bg:       Ink.bg,
 };
 
 // ── Tone helpers ──────────────────────────────────────────────────────────────
 type Tone = 'good' | 'info' | 'warn' | 'danger';
 
 const toneBg: Record<Tone, string> = {
-  danger: '#fbeeee',
-  good:   '#f1f8f3',
-  info:   '#eef3fb',
-  warn:   '#f2eefb',
+  danger: Tint.rose.bg,
+  good:   Tint.mint.bg,
+  info:   Tint.sky.bg,
+  warn:   Tint.sun.bg,
 };
 const toneBorder: Record<Tone, string> = {
-  danger: '#f0d4d4',
-  good:   '#d3e8d8',
-  info:   '#d4def0',
-  warn:   '#ddd3f0',
+  danger: Tint.rose.line,
+  good:   Tint.mint.line,
+  info:   Tint.sky.line,
+  warn:   Tint.sun.line,
 };
 const toneBar: Record<Tone, string> = {
-  danger: C.red,
-  good:   C.green600,
-  info:   C.blue,
-  warn:   C.amber,
+  danger: Tint.rose.ink,
+  good:   Tint.mint.ink,
+  info:   Tint.sky.ink,
+  warn:   Tint.sun.ink,
 };
 const toneText: Record<Tone, string> = {
-  danger: C.red,
-  good:   C.green600,
-  info:   C.blue,
-  warn:   C.amber,
+  danger: Tint.rose.ink,
+  good:   Tint.mint.ink,
+  info:   Tint.sky.ink,
+  warn:   Tint.sun.ink,
 };
 
 // ── KPI Cell ─────────────────────────────────────────────────────────────────
@@ -82,14 +88,14 @@ const kpiStyles = StyleSheet.create({
     flex: 1,
     minWidth: 90,
     borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
+    borderRadius: 14,
+    padding: 18,
     gap: 4,
   },
-  label:  { fontSize: 11, color: C.muted, fontWeight: '500' },
-  value:  { fontSize: 26, fontWeight: '800' },
-  trend:  { fontSize: 11, color: C.soft },
-  bar:    { height: 3, borderRadius: 2, width: '70%', marginTop: 4 },
+  label:  { fontFamily: 'Montserrat-SemiBold', fontSize: 11.5, letterSpacing: 0.35 },
+  value:  { fontFamily: 'Montserrat-Bold', fontSize: 32, letterSpacing: -1.2, lineHeight: 36 },
+  trend:  { fontFamily: 'Montserrat-Medium', fontSize: 11.5, color: C.soft },
+  bar:    { height: 3, borderRadius: 2, width: '70%', marginTop: 6 },
 });
 
 // ── Statistics Oversight Card ─────────────────────────────────────────────────
@@ -137,21 +143,21 @@ const profStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.border,
     borderLeftWidth: 3,
-    borderRadius: 10,
-    padding: 12,
+    borderRadius: 14,
+    padding: 18,
     gap: 4,
   },
   icon:  { fontSize: 20 },
-  label: { fontSize: 11, color: C.muted, fontWeight: '500', flexShrink: 1 },
-  value: { fontSize: 24, fontWeight: '800' },
-  trend: { fontSize: 11, color: C.soft },
+  label: { fontFamily: 'Montserrat-SemiBold', fontSize: 12, color: C.muted, flexShrink: 1 },
+  value: { fontFamily: 'Montserrat-Bold', fontSize: 30, letterSpacing: -1.2 },
+  trend: { fontFamily: 'Montserrat-Medium', fontSize: 11.5, color: C.soft },
 });
 
 // ── Professors Overview Card ──────────────────────────────────────────────────
 const ProfessorsOverviewCard: React.FC = () => {
   const navigation = useNavigation<any>();
   return (
-    <View style={cardStyles.card}>
+    <TouchableOpacity activeOpacity={0.9} onPress={() => navigation.navigate('AdminAccreditation')} style={cardStyles.card}>
       <View style={cardStyles.header}>
         <Text style={cardStyles.title}>Professors Overview</Text>
         <TouchableOpacity onPress={() => navigation.navigate('AdminProfessors')}>
@@ -162,9 +168,8 @@ const ProfessorsOverviewCard: React.FC = () => {
         <ProfTile label="Courses Below Benchmark"       value={7}  tone="danger" icon="📉" trend="↑ 2 from last week" accent={C.red}      />
         <ProfTile label="Professors Requiring Support"  value={4}  tone="warn"   icon="⚠️" trend="→ unchanged"        accent={C.amber}    />
         <ProfTile label="Pending Approvals"             value={12} tone="info"   icon="📋" trend="↑ 5 new today"      accent={C.blue}     />
-        <ProfTile label="Delayed Grading Activities"    value={9}  tone="good"   icon="✏️" trend="↓ 3 resolved"       accent={C.green600} />
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 
@@ -226,23 +231,23 @@ const openDayStyles = StyleSheet.create({
   greenBlock: {
     flex: 1,
     backgroundColor: C.green700,
-    borderRadius: 10,
-    padding: 14,
+    borderRadius: 14,
+    padding: 20,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
   },
-  nextLabel:  { fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.8 },
-  bigDay:     { fontSize: 48, fontWeight: '900', color: '#fff', lineHeight: 52 },
-  month:      { fontSize: 13, color: 'rgba(255,255,255,0.9)', fontWeight: '600' },
-  pill:       { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3, marginTop: 4 },
-  pillText:   { fontSize: 11, color: '#fff', fontWeight: '600' },
+  nextLabel:  { fontFamily: 'Montserrat-Bold', fontSize: 10.5, color: Green[300], textTransform: 'uppercase', letterSpacing: 1.47 },
+  bigDay:     { fontFamily: 'Montserrat-Bold', fontSize: 56, color: '#fff', lineHeight: 60, letterSpacing: -2.5 },
+  month:      { fontFamily: 'Montserrat-SemiBold', fontSize: 16, color: Green[200] },
+  pill:       { backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6, marginTop: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' },
+  pillText:   { fontFamily: 'Montserrat-SemiBold', fontSize: 11, color: '#fff' },
   statsGrid:  { flex: 2, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  statCell:   { width: '46%', backgroundColor: C.green50, borderRadius: 8, padding: 10, gap: 2 },
-  statVal:    { fontSize: 18, fontWeight: '800', color: C.green700 },
-  statLbl:    { fontSize: 10, color: C.muted },
-  capBar:     { height: 4, backgroundColor: C.border, borderRadius: 2, marginTop: 4, width: '100%' },
-  capFill:    { height: 4, backgroundColor: C.green600, borderRadius: 2 },
+  statCell:   { width: '46%', backgroundColor: C.card, borderWidth: 1, borderColor: C.border, borderRadius: 14, padding: 14, gap: 2 },
+  statVal:    { fontFamily: 'Montserrat-Bold', fontSize: 24, color: C.text, letterSpacing: -0.8 },
+  statLbl:    { fontFamily: 'Montserrat-Medium', fontSize: 12, color: C.muted },
+  capBar:     { height: 6, backgroundColor: C.border, borderRadius: 3, marginTop: 6, width: '100%' },
+  capFill:    { height: 6, backgroundColor: Green[500], borderRadius: 3 },
 });
 
 // ── Calendar Timeline Card ────────────────────────────────────────────────────
@@ -280,15 +285,15 @@ const CalendarTimelineCard: React.FC<CalendarCardProps> = ({ events }) => {
 };
 
 const calStyles = StyleSheet.create({
-  row:     { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 8 },
-  time:    { width: 40, fontSize: 11, color: C.muted, paddingTop: 10, textAlign: 'right' },
-  rail:    { alignItems: 'center', width: 16, paddingTop: 10 },
-  dot:     { width: 10, height: 10, borderRadius: 5 },
+  row:     { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 },
+  time:    { width: 44, fontFamily: 'Montserrat-Bold', fontSize: 13, color: C.text, paddingTop: 11, textAlign: 'right' },
+  rail:    { alignItems: 'center', width: 16, paddingTop: 13 },
+  dot:     { width: 8, height: 8, borderRadius: 4 },
   line:    { width: 2, flex: 1, backgroundColor: C.border, marginTop: 2, minHeight: 30 },
-  evCard:  { flex: 1, borderRadius: 8, padding: 8, gap: 2 },
-  evTitle: { fontSize: 13, fontWeight: '700' },
-  evLoc:   { fontSize: 11, color: C.muted },
-  evTime:  { fontSize: 10, color: C.soft },
+  evCard:  { flex: 1, borderRadius: 10, padding: 11, gap: 2 },
+  evTitle: { fontFamily: 'Montserrat-Bold', fontSize: 13, lineHeight: 18 },
+  evLoc:   { fontFamily: 'Montserrat-Medium', fontSize: 11, color: C.muted },
+  evTime:  { fontFamily: 'Montserrat-SemiBold', fontSize: 10.5, color: C.soft, marginTop: 4 },
 });
 
 // ── Tasks Card ────────────────────────────────────────────────────────────────
@@ -363,19 +368,19 @@ const TasksCard: React.FC<TasksCardProps> = ({ tasks: initialTasks }) => {
 };
 
 const taskStyles = StyleSheet.create({
-  row:         { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: C.border },
-  checkbox:    { width: 18, height: 18, borderRadius: 4, borderWidth: 2, borderColor: C.borderSt, alignItems: 'center', justifyContent: 'center' },
-  checkboxDone:{ backgroundColor: C.green600, borderColor: C.green600 },
-  checkMark:   { color: '#fff', fontSize: 11, fontWeight: '700' },
-  body:        { flex: 1, gap: 2 },
-  title:       { fontSize: 13, color: C.text, fontWeight: '500' },
-  done:        { textDecorationLine: 'line-through', opacity: 0.5 },
-  due:         { fontSize: 11, color: C.soft },
-  badge:       { borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
-  badgeText:   { fontSize: 10, fontWeight: '700' },
-  addRow:      { flexDirection: 'row', gap: 8, marginTop: 10 },
-  input:       { flex: 1, borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, fontSize: 13, color: C.text, backgroundColor: C.bg },
-  addBtn:      { backgroundColor: C.green600, borderRadius: 8, width: 36, alignItems: 'center', justifyContent: 'center' },
+  row:         { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: C.border },
+  checkbox:    { width: 20, height: 20, borderRadius: 6, borderWidth: 1.6, borderColor: C.borderSt, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
+  checkboxDone:{ backgroundColor: Green[500], borderColor: Green[500] },
+  checkMark:   { color: '#fff', fontSize: 11, fontFamily: 'Montserrat-Bold' },
+  body:        { flex: 1, gap: 3 },
+  title:       { fontFamily: 'Montserrat-SemiBold', fontSize: 13, color: C.text, lineHeight: 18 },
+  done:        { textDecorationLine: 'line-through', color: C.soft },
+  due:         { fontFamily: 'Montserrat-Medium', fontSize: 11, color: C.soft },
+  badge:       { borderRadius: 5, paddingHorizontal: 7, paddingVertical: 3 },
+  badgeText:   { fontFamily: 'Montserrat-ExtraBold', fontSize: 9.5, letterSpacing: 0.8 },
+  addRow:      { flexDirection: 'row', gap: 8, marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: C.border },
+  input:       { flex: 1, borderWidth: 1, borderColor: C.border, borderRadius: 9, paddingHorizontal: 12, paddingVertical: 9, fontFamily: 'Montserrat-Medium', fontSize: 12.5, color: C.text, backgroundColor: '#fafcfa' },
+  addBtn:      { backgroundColor: Green[700], borderRadius: 9, width: 36, alignItems: 'center', justifyContent: 'center' },
   addBtnText:  { color: '#fff', fontSize: 22, fontWeight: '300', lineHeight: 28 },
 });
 
@@ -383,20 +388,125 @@ const taskStyles = StyleSheet.create({
 const cardStyles = StyleSheet.create({
   card: {
     backgroundColor: C.card,
-    borderRadius: 14,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: C.border,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
+    padding: 22,
+    marginBottom: 18,
+    shadowColor: Ink.base,
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
     elevation: 2,
   },
-  header:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  title:   { fontSize: 15, fontWeight: '700', color: C.text },
-  viewAll: { fontSize: 12, color: C.green600, fontWeight: '600' },
-  row:     { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  header:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  title:   { fontFamily: 'Montserrat-Bold', fontSize: 15, color: C.text, letterSpacing: -0.1 },
+  viewAll: { fontFamily: 'Montserrat-SemiBold', fontSize: 12, color: C.green700, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+  row:     { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+});
+
+// ── News preview card ─────────────────────────────────────────────────────────
+const openArticleUrl = (url: string) => {
+  if (Platform.OS === 'web') {
+    (window as any).open(url, '_blank', 'noopener,noreferrer');
+  } else {
+    Linking.openURL(url).catch(() => Alert.alert('Could not open article.'));
+  }
+};
+
+const fmtNewsDate = (iso: string) => {
+  const d = new Date(iso);
+  const diffH = (Date.now() - d.getTime()) / 3_600_000;
+  if (diffH < 24)  return `${Math.round(diffH)}h ago`;
+  if (diffH < 48)  return 'Yesterday';
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+};
+
+interface NewsPreviewCardProps {
+  articles:   AdminNewsArticle[];
+  loading:    boolean;
+  adminId:    string;
+  onPin:      (a: AdminNewsArticle) => void;
+}
+
+const NewsPreviewCard: React.FC<NewsPreviewCardProps> = ({ articles, loading, adminId, onPin }) => {
+  const navigation = useNavigation<any>();
+
+  return (
+    <View style={cardStyles.card}>
+      <View style={cardStyles.header}>
+        <Text style={cardStyles.title}>Latest Education & Accreditation News</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('AdminNews')}>
+          <Text style={cardStyles.viewAll}>View all →</Text>
+        </TouchableOpacity>
+      </View>
+
+      {loading ? (
+        <ActivityIndicator size="small" color={C.green600} style={{ marginVertical: 12 }} />
+      ) : articles.length === 0 ? (
+        <Text style={npStyles.empty}>No news articles available.</Text>
+      ) : (
+        articles.map(article => {
+          const catColor = CATEGORY_COLORS[article.category] ?? C.green600;
+          const catLabel = CATEGORY_LABELS[article.category] ?? article.category;
+          return (
+            <View key={article.id} style={npStyles.row}>
+              {/* Color strip */}
+              <View style={[npStyles.strip, { backgroundColor: catColor }]} />
+              {/* Content */}
+              <View style={npStyles.content}>
+                <View style={npStyles.topRow}>
+                  <View style={[npStyles.catBadge, { backgroundColor: catColor + '18' }]}>
+                    <Text style={[npStyles.catBadgeText, { color: catColor }]}>{catLabel}</Text>
+                  </View>
+                  {!!article.related_accreditation && (
+                    <View style={npStyles.accredTag}>
+                      <Text style={npStyles.accredTagText}>{article.related_accreditation}</Text>
+                    </View>
+                  )}
+                  <Text style={npStyles.date}>{fmtNewsDate(article.published_at)}</Text>
+                </View>
+                <Text style={npStyles.title} numberOfLines={2}>{article.title}</Text>
+                <Text style={npStyles.source}>{article.source_name}</Text>
+                <View style={npStyles.actions}>
+                  <TouchableOpacity
+                    style={npStyles.readBtn}
+                    onPress={() => openArticleUrl(article.article_url)}
+                  >
+                    <Text style={npStyles.readBtnText}>Read more →</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => onPin(article)}>
+                    <Text style={[npStyles.pinIcon, article.isPinned && { color: '#D97706' }]}>
+                      {article.isPinned ? '★' : '☆'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          );
+        })
+      )}
+    </View>
+  );
+};
+
+const npStyles = StyleSheet.create({
+  empty:       { fontFamily: 'Montserrat-Medium', fontSize: 13, color: C.muted, textAlign: 'center', paddingVertical: 12 },
+  row:         { flexDirection: 'row', marginBottom: 12, borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: C.border, backgroundColor: C.bg },
+  strip:       { width: 4 },
+  content:     { flex: 1, padding: 10, gap: 4 },
+  topRow:      { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  catBadge:    { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  catBadgeText:{ fontFamily: 'Montserrat-Bold', fontSize: 10 },
+  accredTag:   { backgroundColor: Green[100], borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  accredTagText:{ fontFamily: 'Montserrat-Bold', fontSize: 10, color: Green[700] },
+  date:        { fontFamily: 'Montserrat-Medium', fontSize: 10, color: C.soft, marginLeft: 'auto' as any },
+  title:       { fontFamily: 'Montserrat-Bold', fontSize: 13, color: C.text, lineHeight: 18 },
+  source:      { fontFamily: 'Montserrat-Medium', fontSize: 11, color: C.soft, fontStyle: 'italic' },
+  actions:     { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
+  readBtn:     { backgroundColor: Green[700], borderRadius: 8, paddingVertical: 5, paddingHorizontal: 10 },
+  readBtnText: { fontFamily: 'Montserrat-Bold', fontSize: 12, color: '#fff' },
+  pinIcon:     { fontSize: 20, color: 'rgba(26,26,26,0.35)' },
 });
 
 // ── Main Dashboard ────────────────────────────────────────────────────────────
@@ -405,6 +515,8 @@ interface Props { profile: Profile; }
 const AdminDashboard: React.FC<Props> = ({ profile }) => {
   const { width } = useWindowDimensions();
   const isWide = width >= 768;
+  const { settings: instSettings } = useInstitution();
+  const accreditation = instSettings?.accreditation ?? 'AACSB';
 
   const [atRisk, setAtRisk]     = useState(0);
   const [avgGrade, setAvgGrade] = useState(78);
@@ -415,6 +527,10 @@ const AdminDashboard: React.FC<Props> = ({ profile }) => {
   const [location, setLocation] = useState('Fetching location…');
   const [timeStr, setTimeStr]   = useState('');
   const [dateStr, setDateStr]   = useState('');
+
+  // News preview state
+  const [newsArticles,  setNewsArticles]  = useState<AdminNewsArticle[]>([]);
+  const [newsLoading,   setNewsLoading]   = useState(true);
 
   // Clock
   useEffect(() => {
@@ -480,7 +596,24 @@ const AdminDashboard: React.FC<Props> = ({ profile }) => {
     }
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  const loadNews = useCallback(async () => {
+    setNewsLoading(true);
+    try {
+      const top = await getTopAdminNews(profile.id, accreditation, 3);
+      setNewsArticles(top);
+    } catch {
+      // silently keep empty
+    } finally {
+      setNewsLoading(false);
+    }
+  }, [profile.id, accreditation]);
+
+  const handleNewsPin = async (article: AdminNewsArticle) => {
+    const next = await togglePinAdminArticle(profile.id, article);
+    setNewsArticles(prev => prev.map(a => a.id === article.id ? { ...a, isPinned: next } : a));
+  };
+
+  useEffect(() => { loadData(); loadNews(); }, [loadData, loadNews]);
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
@@ -495,6 +628,12 @@ const AdminDashboard: React.FC<Props> = ({ profile }) => {
       }
       <ProfessorsOverviewCard />
       <OpenDayCard stat={openDay} />
+      <NewsPreviewCard
+        articles={newsArticles}
+        loading={newsLoading}
+        adminId={profile.id}
+        onPin={handleNewsPin}
+      />
     </>
   );
 
@@ -545,19 +684,19 @@ const AdminDashboard: React.FC<Props> = ({ profile }) => {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
-  content:   { padding: 16, paddingBottom: 40 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  content:   { padding: 20, paddingBottom: 48 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   headerLeft:{ flex: 1 },
   headerRight:{ flexDirection: 'row', alignItems: 'center', gap: 10 },
-  greeting:  { fontSize: 22, fontWeight: '800', color: C.text },
-  subRow:    { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginTop: 2 },
-  sub:       { fontSize: 12, color: C.muted },
-  loc:       { fontSize: 12, color: C.soft },
-  clock:     { fontSize: 18, fontWeight: '700', color: C.green700 },
-  chip:      { width: 34, height: 34, borderRadius: 17, backgroundColor: C.green600, alignItems: 'center', justifyContent: 'center' },
-  chipText:  { color: '#fff', fontWeight: '700', fontSize: 13 },
-  adminBadge:{ backgroundColor: C.green50, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: C.border },
-  adminBadgeText: { fontSize: 11, color: C.green700, fontWeight: '600' },
+  greeting:  { fontFamily: 'Montserrat-Bold', fontSize: 24, color: C.text, letterSpacing: -0.6 },
+  subRow:    { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginTop: 4 },
+  sub:       { fontFamily: 'Montserrat-Medium', fontSize: 13, color: C.muted },
+  loc:       { fontFamily: 'Montserrat-Medium', fontSize: 13, color: C.soft },
+  clock:     { fontFamily: 'Montserrat-Bold', fontSize: 18, color: C.text },
+  chip:      { width: 38, height: 38, borderRadius: 19, backgroundColor: Green[500], alignItems: 'center', justifyContent: 'center' },
+  chipText:  { fontFamily: 'Montserrat-Bold', color: '#fff', fontSize: 13 },
+  adminBadge:{ backgroundColor: Green[100], borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: Green[200] },
+  adminBadgeText: { fontFamily: 'Montserrat-Bold', fontSize: 11, color: Green[800], letterSpacing: 0.4 },
   cols:      { flexDirection: 'row', gap: 20, alignItems: 'flex-start' },
   leftCol:   { flex: 2 },
   rightCol:  { flex: 1, minWidth: 280 },

@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Profile, Course, TeacherStats, Student, CourseEnrollment, StudentWithEnrollments, AdminTask, AdminCalendarEvent, PendingApproval, AdminNewsItem, ProfessorOverview, OpenDayStat, CourseEnrollmentStat } from '../types';
+import { Profile, Course, TeacherStats, Student, CourseEnrollment, StudentWithEnrollments, AdminTask, AdminCalendarEvent, PendingApproval, AdminNewsItem, ProfessorOverview, OpenDayStat, CourseEnrollmentStat, InstitutionSettings, AcademicPeriod, AccreditationType } from '../types';
 
 const SUPABASE_URL = 'https://nkfthxagzjoimxxlwcrv.supabase.co';
 const SUPABASE_ANON_KEY =
@@ -36,14 +36,63 @@ export const getProfile = async (userId: string): Promise<Profile> => {
   return data as Profile;
 };
 
-// Uses course_teachers junction table (supports multiple teachers per course)
+// Fetches courses for a professor. Primary path: courses.teacher_id (simple, no join).
+// Secondary path: course_teachers junction table (for multi-teacher courses).
+// Also enriches each course with live student_count and completion_rate (avg grade).
 export const getCoursesByTeacher = async (teacherId: string): Promise<Course[]> => {
-  const { data, error } = await supabase
-    .from('course_teachers')
-    .select('courses(*)')
+  // Primary: query courses.teacher_id directly — simplest, fewest RLS dependencies
+  const { data: directCourses, error: directErr } = await supabase
+    .from('courses')
+    .select('*')
     .eq('teacher_id', teacherId);
-  if (error) throw error;
-  return (data ?? []).map((r: any) => r.courses).filter(Boolean);
+
+  let courseIds: string[] = [];
+
+  if (!directErr && directCourses && directCourses.length > 0) {
+    courseIds = directCourses.map((c: any) => c.id);
+  } else {
+    // Secondary: course_teachers junction table
+    const { data: ctData, error: ctError } = await supabase
+      .from('course_teachers')
+      .select('course_id')
+      .eq('teacher_id', teacherId);
+    if (ctError) throw ctError;
+    courseIds = (ctData ?? []).map((r: any) => r.course_id);
+  }
+
+  if (courseIds.length === 0) return [];
+
+  // Fetch full course details for the resolved IDs
+  const { data: courses, error: coursesErr } = await supabase
+    .from('courses')
+    .select('*')
+    .in('id', courseIds);
+  if (coursesErr) throw coursesErr;
+  if (!courses?.length) return [];
+
+  // Fetch enrollment stats (student count + avg grade) in one extra query
+  const { data: enrollments } = await supabase
+    .from('course_enrollments')
+    .select('course_id, grade')
+    .in('course_id', courseIds);
+
+  const statsMap: Record<string, { count: number; grades: number[] }> = {};
+  (enrollments ?? []).forEach((row: any) => {
+    if (!statsMap[row.course_id]) statsMap[row.course_id] = { count: 0, grades: [] };
+    statsMap[row.course_id].count++;
+    if (row.grade != null) statsMap[row.course_id].grades.push(row.grade);
+  });
+
+  return courses
+    .map((c: any) => {
+      const stat   = statsMap[c.id];
+      const grades = stat?.grades ?? [];
+      const avgGrade = grades.length
+        ? Math.round(grades.reduce((s: number, g: number) => s + g, 0) / grades.length)
+        : undefined;
+      return { ...c, student_count: stat?.count ?? 0, completion_rate: avgGrade };
+    })
+    .sort((a: any, b: any) => a.name.localeCompare(b.name));
 };
 
 // Keep old name as alias so nothing breaks
@@ -51,16 +100,26 @@ export const getCoursesByProfessor = getCoursesByTeacher;
 
 // Fetch all students enrolled in the teacher's courses (with their enrollment data)
 export const getStudentsByTeacher = async (teacherId: string): Promise<StudentWithEnrollments[]> => {
-  // Step 1: get the teacher's course IDs via junction table
-  const { data: coursesData, error: coursesError } = await supabase
-    .from('course_teachers')
-    .select('course_id')
+  // Step 1: resolve course IDs — try courses.teacher_id first, then junction table
+  let courseIds: string[] = [];
+
+  const { data: directCourses } = await supabase
+    .from('courses')
+    .select('id')
     .eq('teacher_id', teacherId);
 
-  if (coursesError) throw coursesError;
-  if (!coursesData || coursesData.length === 0) return [];
+  if (directCourses && directCourses.length > 0) {
+    courseIds = directCourses.map((c: any) => c.id);
+  } else {
+    const { data: ctData, error: coursesError } = await supabase
+      .from('course_teachers')
+      .select('course_id')
+      .eq('teacher_id', teacherId);
+    if (coursesError) throw coursesError;
+    courseIds = (ctData ?? []).map((c: any) => c.course_id);
+  }
 
-  const courseIds = coursesData.map((c: any) => c.course_id);
+  if (courseIds.length === 0) return [];
 
   // Step 2: fetch enrollments with student info for those courses
   const { data, error } = await supabase
@@ -71,18 +130,22 @@ export const getStudentsByTeacher = async (teacherId: string): Promise<StudentWi
       course_id,
       grade,
       missed_classes,
-      skipped_classes,
-      enrolled_at,
       students (
         id,
         full_name,
         email,
-        created_at
+        created_at,
+        nationality,
+        date_of_birth,
+        description
       )
     `)
     .in('course_id', courseIds);
 
-  if (error) throw error;
+  if (error) {
+    console.error('[getStudentsByTeacher] enrollment query error:', error);
+    throw error;
+  }
   if (!data) return [];
 
   // Step 3: group enrollments by student
@@ -99,8 +162,8 @@ export const getStudentsByTeacher = async (teacherId: string): Promise<StudentWi
       course_id: row.course_id,
       grade: row.grade,
       missed_classes: row.missed_classes,
-      skipped_classes: row.skipped_classes,
-      enrolled_at: row.enrolled_at,
+      skipped_classes: row.skipped_classes ?? 0,
+      enrolled_at: row.enrolled_at ?? null,
     });
   });
 
@@ -389,11 +452,96 @@ export const getOpenDayStats = async (): Promise<OpenDayStat> => {
 };
 
 /**
- * Fetch admin calendar events.
- * TODO: connect to admin_calendar or events table.
+ * Fetch admin calendar events from the admin_calendar table.
+ * Returns [] (and logs) on error so the screen degrades gracefully.
  */
 export const getAdminCalendarEvents = async (): Promise<AdminCalendarEvent[]> => {
-  return MOCK_ADMIN_EVENTS;
+  const { data, error } = await supabase
+    .from('admin_calendar')
+    .select('id, title, date, time, end_time, location, type, color')
+    .order('date', { ascending: true })
+    .order('time', { ascending: true });
+  if (error) {
+    console.error('Failed to load admin calendar events:', error);
+    return [];
+  }
+  return (data ?? []) as AdminCalendarEvent[];
+};
+
+/**
+ * Insert a new admin calendar event and return the real saved row
+ * (with its DB-generated id). Throws on failure so callers can show an
+ * error and avoid updating local state / firing notifications.
+ */
+export const createAdminCalendarEvent = async (
+  input: Omit<AdminCalendarEvent, 'id'>,
+): Promise<AdminCalendarEvent> => {
+  const { data: auth } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from('admin_calendar')
+    .insert({
+      title:      input.title,
+      date:       input.date,
+      time:       input.time,
+      end_time:   input.end_time ?? null,
+      location:   input.location,
+      type:       input.type,
+      color:      input.color ?? null,
+      created_by: auth?.user?.id ?? null,
+    })
+    .select('id, title, date, time, end_time, location, type, color')
+    .single();
+  if (error || !data) {
+    throw error ?? new Error('Insert returned no row');
+  }
+  return data as AdminCalendarEvent;
+};
+
+/**
+ * Fetch a professor's own calendar events from the professor_calendar table.
+ * Scoped to the given professor id. Returns [] (and logs) on error.
+ */
+export const getProfessorCalendarEvents = async (professorId: string): Promise<AdminCalendarEvent[]> => {
+  const { data, error } = await supabase
+    .from('professor_calendar')
+    .select('id, title, date, time, end_time, location, type, color')
+    .eq('professor_id', professorId)
+    .order('date', { ascending: true })
+    .order('time', { ascending: true });
+  if (error) {
+    console.error('Failed to load professor calendar events:', error);
+    return [];
+  }
+  return (data ?? []) as AdminCalendarEvent[];
+};
+
+/**
+ * Insert a new professor calendar event (owned by the given professor) and
+ * return the real saved row. Throws on failure so callers can show an error
+ * and avoid updating local state.
+ */
+export const createProfessorCalendarEvent = async (
+  professorId: string,
+  input: Omit<AdminCalendarEvent, 'id'>,
+): Promise<AdminCalendarEvent> => {
+  const { data, error } = await supabase
+    .from('professor_calendar')
+    .insert({
+      title:        input.title,
+      date:         input.date,
+      time:         input.time,
+      end_time:     input.end_time ?? null,
+      location:     input.location,
+      type:         input.type,
+      color:        input.color ?? null,
+      professor_id: professorId,
+    })
+    .select('id, title, date, time, end_time, location, type, color')
+    .single();
+  if (error || !data) {
+    throw error ?? new Error('Insert returned no row');
+  }
+  return data as AdminCalendarEvent;
 };
 
 /**
@@ -434,6 +582,248 @@ const MOCK_APPROVALS: PendingApproval[] = [
   { id: 'ap3', professor_name: 'Michael Weber',  professor_email: 'michael.weber@best-teacher.ch',  document_name: 'Attendance Summary.docx',       file_url: '', file_type: 'word',  status: 'pending', submitted_at: '2026-05-12T09:00:00Z' },
   { id: 'ap4', professor_name: 'Sophie Fischer', professor_email: 'sophie.fischer@best-teacher.ch', document_name: 'Lab Results Presentation.pptx', file_url: '', file_type: 'ppt',  status: 'pending', submitted_at: '2026-05-11T16:00:00Z' },
 ];
+
+// ── Institution Settings ───────────────────────────────────────────────────
+
+/**
+ * Fetch the single institution_settings row (there is at most one).
+ */
+export const getInstitutionSettings = async (): Promise<InstitutionSettings | null> => {
+  const { data, error } = await supabase
+    .from('institution_settings')
+    .select('*')
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+};
+
+/**
+ * Save institution setup. Inserts on first call; updates if row exists and not yet locked.
+ * Sets locked = true so normal users can never change it again.
+ */
+export const saveInstitutionSettings = async (
+  payload: {
+    name: string;
+    country: string;
+    city: string;
+    address: string;
+    accreditation: AccreditationType;
+    programs: string[];
+    academic_periods: AcademicPeriod[];
+  },
+  adminId: string,
+): Promise<void> => {
+  const { data: existing } = await supabase
+    .from('institution_settings')
+    .select('id, locked')
+    .limit(1)
+    .maybeSingle();
+
+  if (existing?.locked) throw new Error('Institution settings are locked and cannot be changed.');
+
+  const row = {
+    ...payload,
+    setup_completed: true,
+    setup_completed_by: adminId,
+    setup_completed_at: new Date().toISOString(),
+    locked: true,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (existing) {
+    const { error } = await supabase
+      .from('institution_settings')
+      .update(row)
+      .eq('id', existing.id);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase
+      .from('institution_settings')
+      .insert(row);
+    if (error) throw error;
+  }
+};
+
+// ── Reusable service functions (used by Courses, Students, Warnings pages) ────
+
+/**
+ * Returns the currently authenticated user's profile, or null if not signed in.
+ */
+export const getCurrentProfile = async (): Promise<Profile | null> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  return getProfile(user.id);
+};
+
+/**
+ * Alias: professor-scoped courses (same as getCoursesByTeacher).
+ */
+export const getProfessorCourses = getCoursesByTeacher;
+
+/**
+ * Returns all students enrolled in a single course, with their enrollment data.
+ */
+export const getCourseStudents = async (courseId: string): Promise<StudentWithEnrollments[]> => {
+  const { data, error } = await supabase
+    .from('course_enrollments')
+    .select(`
+      id,
+      student_id,
+      course_id,
+      grade,
+      missed_classes,
+      skipped_classes,
+      enrolled_at,
+      students (
+        id,
+        full_name,
+        email,
+        created_at,
+        nationality,
+        date_of_birth,
+        description
+      )
+    `)
+    .eq('course_id', courseId)
+    .order('grade', { ascending: false });
+
+  if (error) throw error;
+  if (!data) return [];
+
+  return (data as any[])
+    .filter(row => !!row.students)
+    .map(row => ({
+      ...(row.students as Student),
+      enrollments: [{
+        id:             row.id,
+        student_id:     row.student_id,
+        course_id:      row.course_id,
+        grade:          row.grade,
+        missed_classes: row.missed_classes,
+        skipped_classes: row.skipped_classes,
+        enrolled_at:    row.enrolled_at,
+      }],
+    }));
+};
+
+/**
+ * Alias: professor-scoped students (same as getStudentsByTeacher).
+ */
+export const getProfessorStudents = getStudentsByTeacher;
+
+/**
+ * Returns ALL students in the institution (admin view), with their enrollment data.
+ * Each student includes the full list of course_enrollments they belong to.
+ */
+export const getAllStudents = async (): Promise<StudentWithEnrollments[]> => {
+  const { data, error } = await supabase
+    .from('students')
+    .select(`
+      id,
+      full_name,
+      email,
+      created_at,
+      nationality,
+      date_of_birth,
+      description,
+      course_enrollments (
+        id,
+        student_id,
+        course_id,
+        grade,
+        missed_classes,
+        skipped_classes,
+        enrolled_at
+      )
+    `)
+    .order('full_name', { ascending: true });
+
+  if (error) throw error;
+
+  return (data ?? []).map((row: any) => ({
+    id:            row.id,
+    full_name:     row.full_name,
+    email:         row.email ?? '',
+    created_at:    row.created_at,
+    nationality:   row.nationality   ?? null,
+    date_of_birth: row.date_of_birth ?? null,
+    description:   row.description   ?? null,
+    enrollments: (row.course_enrollments ?? []).map((e: any) => ({
+      id:              e.id,
+      student_id:      row.id,
+      course_id:       e.course_id,
+      grade:           e.grade ?? null,
+      missed_classes:  e.missed_classes ?? 0,
+      skipped_classes: e.skipped_classes ?? 0,
+      enrolled_at:     e.enrolled_at ?? null,
+    })),
+  }));
+};
+
+/**
+ * Updates the description / note for a single student.
+ * Pass null to clear the note.
+ */
+export const updateStudentDescription = async (
+  studentId: string,
+  description: string | null,
+): Promise<void> => {
+  const { error } = await supabase
+    .from('students')
+    .update({ description })
+    .eq('id', studentId);
+  if (error) throw error;
+};
+
+/**
+ * Updates one or more profile fields (full_name, email, nationality,
+ * date_of_birth, description) for a single student.
+ */
+export const updateStudentProfile = async (
+  studentId: string,
+  updates: Partial<{
+    full_name:     string;
+    email:         string | null;
+    nationality:   string | null;
+    date_of_birth: string | null;
+    description:   string | null;
+  }>,
+): Promise<void> => {
+  const { error } = await supabase
+    .from('students')
+    .update(updates)
+    .eq('id', studentId);
+  if (error) throw error;
+};
+
+/**
+ * Returns the global warning/risk limits set by the admin.
+ * Thin wrapper around riskService.getRiskSettings() — kept here
+ * so screens that only import supabase.ts don't need a second import.
+ */
+export const getWarningSettings = async () => {
+  const { getRiskSettings } = await import('./riskService');
+  return getRiskSettings();
+};
+
+/**
+ * Returns active/resolved risk warnings for a specific professor's courses.
+ * Thin wrapper around riskService.getWarningsForProfessor().
+ */
+export const getAtRiskStudentsForProfessor = async (professorId: string) => {
+  const { getWarningsForProfessor } = await import('./riskService');
+  return getWarningsForProfessor(professorId);
+};
+
+/**
+ * Returns all risk warnings across the institution (admin view).
+ * Thin wrapper around riskService.getAllWarningsForAdmin().
+ */
+export const getAllAtRiskStudentsForAdmin = async () => {
+  const { getAllWarningsForAdmin } = await import('./riskService');
+  return getAllWarningsForAdmin();
+};
 
 const MOCK_NEWS_ITEMS: AdminNewsItem[] = [
   { id: 'n1', title: 'Policy Update: Absence tracking', date: 'May 10, 2026', is_new: true,  thumb_index: 0 },
