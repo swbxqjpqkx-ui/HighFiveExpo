@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
+  StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Image,
 } from 'react-native';
-import { signIn, getProfile } from '../services/supabase';
+import { signIn, getProfile, signOut } from '../services/supabase';
 import { Colors, Typography, Spacing, Radius } from '../theme';
 import { Profile } from '../types';
 
@@ -28,6 +28,15 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
     try {
       const data = await signIn(email, password);
       const profile = await getProfile(data.user.id);
+      if (profile.role !== role) {
+        await signOut();
+        setError(
+          profile.role === 'administrator'
+            ? 'This account is registered as Administrator. Please use the Administrator login.'
+            : 'This account is registered as Professor. Please use the Professor login.'
+        );
+        return;
+      }
       onLogin(profile);
     } catch (e: any) {
       setError(e.message ?? 'Login failed. Please try again.');
@@ -41,7 +50,11 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <View style={styles.card}>
           <View style={styles.logoArea}>
-            <Text style={styles.logoEmoji}>✋</Text>
+            <Image
+              source={require('../../assets/images/highfive-logo.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
             <Text style={styles.logoText}>High Five</Text>
             <Text style={styles.logoTagline}>Smarter schools start here</Text>
           </View>
@@ -108,7 +121,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 16, elevation: 4,
   },
   logoArea: { alignItems: 'center', marginBottom: Spacing.xl },
-  logoEmoji: { fontSize: 48, marginBottom: Spacing.sm },
+  logoImage: { width: 120, height: 96, marginBottom: Spacing.sm },
   logoText: { ...Typography.display, textAlign: 'center' },
   logoTagline: { fontSize: 28, fontWeight: '500', color: Colors.forest, textAlign: 'center', marginTop: 4 },
   roleRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg },

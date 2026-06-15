@@ -122,6 +122,7 @@ export type DrawerParamList = {
   Warnings: undefined;
   News: undefined;
   Calendar: undefined;
+  Tasks: undefined;
   Profile: undefined;
   Settings: undefined;
 };

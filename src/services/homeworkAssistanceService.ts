@@ -4,6 +4,7 @@ import {
   HomeworkGradingBatch,
   HomeworkStudentResult,
   HomeworkHistoryItem,
+  HomeworkHistoryRecord,
 } from '../types/homeworkAssistance';
 
 // ── Course context types ───────────────────────────────────────────────────────
@@ -293,6 +294,88 @@ export const fetchHomeworkAssistanceHistory = async (
   const all = [...alignmentItems, ...gradingItems];
   all.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   return all;
+};
+
+// ── Homework History (professor-only graded homework) ─────────────────────────
+// Reads the existing homework_student_results joined to their parent
+// homework_grading_batches, scoped to the logged-in professor via the batch's
+// professor_id. No new table / no policy change. RLS already restricts a
+// professor to their own batches' results.
+
+const deriveFileName = (url: string): string => {
+  if (!url) return '';
+  try {
+    const last = url.split('/').pop() ?? '';
+    const decoded = decodeURIComponent(last);
+    // Storage paths are prefixed with a timestamp (e.g. "1748523456789_File.pdf")
+    return decoded.replace(/^\d+_/, '');
+  } catch {
+    return '';
+  }
+};
+
+export const fetchProfessorHomeworkHistory = async (
+  professorId: string,
+): Promise<HomeworkHistoryRecord[]> => {
+  const { data, error } = await supabase
+    .from('homework_student_results')
+    .select(`
+      *,
+      homework_grading_batches!inner(
+        id, professor_id, course_id, course_name, assignment_title, rubric_text
+      )
+    `)
+    .eq('homework_grading_batches.professor_id', professorId)
+    .order('created_at', { ascending: false });
+
+  if (error || !data) return [];
+
+  return (data as any[]).map(row => {
+    const batch = row.homework_grading_batches ?? {};
+    return {
+      id:                row.id,
+      batch_id:          row.batch_id,
+      professor_id:      batch.professor_id ?? professorId,
+      course_id:         batch.course_id ?? '',
+      course_name:       batch.course_name ?? '',
+      assignment_title:  batch.assignment_title ?? 'Assignment',
+      topic_name:        row.topic_name ?? undefined,
+      student_id:        row.student_id ?? undefined,
+      student_name:      row.student_name ?? 'Unknown',
+      uploaded_file_name: deriveFileName(row.submission_file_url ?? ''),
+      submission_file_url: row.submission_file_url ?? '',
+      rubric_used:       batch.rubric_text ?? '',
+      grade_justification: row.grade_justification ?? '',
+      strengths:         row.strengths ?? [],
+      weaknesses:        row.weaknesses ?? [],
+      improvement_recommendations: row.improvement_recommendations ?? [],
+      missing_requirements: row.missing_requirements ?? [],
+      plagiarism_risk_summary: row.plagiarism_risk_summary ?? '',
+      student_feedback_draft: row.student_feedback_draft ?? '',
+      original_ai_feedback: row.original_ai_feedback || undefined,
+      overall_suggested_grade: row.overall_suggested_grade ?? 0,
+      professor_edited_grade: row.professor_edited_grade ?? undefined,
+      grade_points:      row.grade_points ?? undefined,
+      total_points:      row.total_points ?? undefined,
+      professor_edited_feedback: row.professor_edited_feedback || undefined,
+      professor_note:    row.professor_note || undefined,
+      professor_status:  (row.professor_status ?? 'pending') as HomeworkHistoryRecord['professor_status'],
+      approved_at:       row.approved_at ?? undefined,
+      checked_at:        row.created_at,
+      updated_at:        row.updated_at,
+    };
+  });
+};
+
+// Delete a single saved homework history item (one student result row).
+// RLS "professors_manage_own_student_results" (FOR ALL) authorises the delete
+// only when the row's batch belongs to the logged-in professor.
+export const deleteHomeworkResult = async (id: string): Promise<void> => {
+  const { error } = await supabase
+    .from('homework_student_results')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
 };
 
 // ── Enrolled students ─────────────────────────────────────────────────────────

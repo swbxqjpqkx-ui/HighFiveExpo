@@ -203,6 +203,9 @@ export const getOrRunAIAnalysis = async (
       .select('*')
       .eq('course_id', submission.course_id)
       .eq('target_id', submission.id)
+      // Professor-private Material Check results (analysis_type='material_alignment')
+      // must never appear in any admin view — exclude them defensively.
+      .neq('analysis_type', 'material_alignment')
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();

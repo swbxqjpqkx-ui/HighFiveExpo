@@ -1,0 +1,12 @@
+{
+  "name": "highfive-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Isolated Playwright test harness for High Five. Does NOT touch the app package.json.",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0"
+  }
+}

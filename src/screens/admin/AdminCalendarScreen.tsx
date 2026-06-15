@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity,
   Modal, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
+import { useRoute } from '@react-navigation/native';
 import { getAdminCalendarEvents, createAdminCalendarEvent } from '../../services/supabase';
 import { notifyAllAdmins } from '../../services/notificationService';
 import { AdminCalendarEvent } from '../../types';
@@ -144,6 +145,19 @@ const AdminCalendarScreen: React.FC = () => {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  // When opened from the home-page calendar widget, jump straight to the tapped
+  // event's day and open the existing day-details modal. `focusNonce` re-triggers
+  // this on repeat taps of the same date.
+  const route = useRoute<any>();
+  const focusDate: string | undefined = route.params?.focusDate;
+  const focusNonce = route.params?.focusNonce;
+  useEffect(() => {
+    if (focusDate) {
+      setSelectedDate(focusDate);
+      setShowDayDetails(true);
+    }
+  }, [focusDate, focusNonce]);
 
   // Build calendar grid
   const firstDay = new Date(year, month, 1).getDay();

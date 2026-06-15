@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import { ANTHROPIC_API_KEY, CLAUDE_MODEL, CLAUDE_URL } from '../config/ai';
 import { supabase } from './supabase';
-import { AIAnalysisResult, AIIssue, SchemeTopic } from '../types/courseManagement';
+import { AIAnalysisResult, AIIssue, SchemeTopic, MaterialCheckResult, MaterialAlignmentStatus } from '../types/courseManagement';
 
 // AI analysis runs only in the native app — the web preview deliberately ships
 // without an Anthropic key, so these features are unavailable there.
@@ -86,7 +86,6 @@ export const analyseDocumentWithAI = async (
   accreditation: string,
   program?: string,
 ): Promise<AIAnalysisResult> => {
-  if (Platform.OS === 'web') throw new Error(WEB_PREVIEW_MESSAGE);
   // Fetch the submitted document as base64
   const doc = await fetchAsBase64(fileUrl);
 
@@ -170,7 +169,6 @@ const stripJson = (text: string): string =>
 // topic information" — it does not change the existing upload flow; courseManagement
 // calls it lazily during a check and saves the result to scheme_of_work.topics.
 export const extractSchemeTopics = async (fileUrl: string): Promise<SchemeTopic[]> => {
-  if (Platform.OS === 'web') throw new Error(WEB_PREVIEW_MESSAGE);
   const doc = await fetchAsBase64(fileUrl);
   const supportedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/gif', 'image/webp'];
   const mediaType = supportedTypes.includes(doc.mimeType) ? doc.mimeType : 'application/pdf';
@@ -242,7 +240,6 @@ export const compareSchemeTopics = async (
   courseA: { name: string; topics: SchemeTopic[] },
   courseB: { name: string; topics: SchemeTopic[] },
 ): Promise<RawTopicOverlap[]> => {
-  if (Platform.OS === 'web') throw new Error(WEB_PREVIEW_MESSAGE);
   if (!courseA.topics.length || !courseB.topics.length) return [];
 
   const fmt = (ts: SchemeTopic[]) =>
@@ -311,4 +308,147 @@ Keep explanation and recommendation short and simple. Return [] if there are no 
       explanation: String(o.explanation ?? '').trim(),
       recommendation: String(o.recommendation ?? '').trim(),
     }));
+};
+
+// ── Material Check: curriculum-alignment analysis ─────────────────────────────
+// Analyses ONE uploaded course material against the course's accreditation
+// standards + Scheme of Work + syllabus + learning objectives, and returns the
+// rich MaterialCheckResult the Material Check screen renders. Reuses the SAME
+// Claude endpoint/config and document-upload pattern as analyseDocumentWithAI —
+// no new key, no new infrastructure. The caller (courseManagement) persists it.
+// Thrown error 'FILE_READ_FAILED' lets the UI show the unreadable-file message.
+
+const asStrings = (x: any): string[] =>
+  Array.isArray(x) ? x.map((v) => String(v).trim()).filter(Boolean) : [];
+
+const parseMaterialCheck = (text: string): MaterialCheckResult => {
+  const p = JSON.parse(stripJson(text));
+  const status: MaterialAlignmentStatus =
+    ['Aligned', 'Partially Aligned', 'Not Aligned'].includes(p.overallStatus)
+      ? p.overallStatus : 'Partially Aligned';
+  return {
+    overallStatus: status,
+    alignmentScore: Math.min(100, Math.max(0, Number(p.alignmentScore) || 0)),
+    overallSummary: String(p.overallSummary ?? ''),
+    accreditationCheck: {
+      coveredStandards: asStrings(p.accreditationCheck?.coveredStandards),
+      missingOrWeakStandards: asStrings(p.accreditationCheck?.missingOrWeakStandards),
+      explanation: String(p.accreditationCheck?.explanation ?? ''),
+    },
+    schemeOfWorkCheck: {
+      matchedWeeksOrTopics: asStrings(p.schemeOfWorkCheck?.matchedWeeksOrTopics),
+      missingTopics: asStrings(p.schemeOfWorkCheck?.missingTopics),
+      extraOrUnplannedTopics: asStrings(p.schemeOfWorkCheck?.extraOrUnplannedTopics),
+      sequencingIssues: asStrings(p.schemeOfWorkCheck?.sequencingIssues),
+      explanation: String(p.schemeOfWorkCheck?.explanation ?? ''),
+    },
+    learningObjectivesCheck: {
+      supportedObjectives: asStrings(p.learningObjectivesCheck?.supportedObjectives),
+      unsupportedObjectives: asStrings(p.learningObjectivesCheck?.unsupportedObjectives),
+      explanation: String(p.learningObjectivesCheck?.explanation ?? ''),
+    },
+    gapsAndProblems: asStrings(p.gapsAndProblems),
+    recommendations: asStrings(p.recommendations),
+  };
+};
+
+export interface MaterialAlignmentInput {
+  fileUrl: string;
+  courseName: string;
+  accreditationStandards: string;
+  courseSyllabus: string;
+  schemeOfWork: string;
+  learningObjectives: string;
+}
+
+export const analyseMaterialAlignment = async (
+  input: MaterialAlignmentInput,
+): Promise<MaterialCheckResult> => {
+
+  let doc: { base64: string; mimeType: string };
+  try {
+    doc = await fetchAsBase64(input.fileUrl);
+  } catch {
+    throw new Error('FILE_READ_FAILED');
+  }
+
+  const supportedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+  const mediaType = supportedTypes.includes(doc.mimeType) ? doc.mimeType : 'application/pdf';
+
+  const prompt = `You are an academic accreditation and curriculum alignment assistant for the High Five platform.
+
+Analyze the uploaded teaching material for the course: ${input.courseName}.
+The uploaded material is attached as a document — read its full content.
+
+Compare the material against:
+1. Accreditation standards: ${input.accreditationStandards}
+2. Course syllabus: ${input.courseSyllabus}
+3. Scheme of Work: ${input.schemeOfWork}
+4. Learning objectives: ${input.learningObjectives}
+
+Return the analysis in this JSON structure only, with no markdown and no code fences:
+{
+  "overallStatus": "Aligned | Partially Aligned | Not Aligned",
+  "alignmentScore": 0,
+  "overallSummary": "Short 2-3 sentence summary of the alignment result",
+  "accreditationCheck": {
+    "coveredStandards": [],
+    "missingOrWeakStandards": [],
+    "explanation": ""
+  },
+  "schemeOfWorkCheck": {
+    "matchedWeeksOrTopics": [],
+    "missingTopics": [],
+    "extraOrUnplannedTopics": [],
+    "sequencingIssues": [],
+    "explanation": ""
+  },
+  "learningObjectivesCheck": {
+    "supportedObjectives": [],
+    "unsupportedObjectives": [],
+    "explanation": ""
+  },
+  "gapsAndProblems": [],
+  "recommendations": []
+}
+
+Rules:
+- alignmentScore must be a number from 0 to 100.
+- Do not invent accreditation standards.
+- Do not invent Scheme of Work topics.
+- If something is missing from the provided course data, mention it clearly.
+- Keep the feedback clear, academic, practical, and concise.
+- Recommendations should be brief and directly useful for the professor.`;
+
+  const response = await fetch(CLAUDE_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: CLAUDE_MODEL,
+      max_tokens: 4096,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'document', source: { type: 'base64', media_type: mediaType, data: doc.base64 } },
+          { type: 'text', text: prompt },
+        ],
+      }],
+    }),
+  });
+
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    throw new Error(`Claude API error: ${response.status} — ${JSON.stringify(errData)}`);
+  }
+
+  const data = await response.json();
+  const responseText = data?.content?.[0]?.text;
+  if (!responseText) throw new Error('Empty response from Claude API.');
+
+  return parseMaterialCheck(responseText);
 };

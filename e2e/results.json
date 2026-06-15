@@ -1,0 +1,1660 @@
+{
+  "config": {
+    "configFile": "/Users/ibragazalee/Desktop/application files/HighFiveExpo/e2e/playwright.config.ts",
+    "rootDir": "/Users/ibragazalee/Desktop/application files/HighFiveExpo/e2e/tests",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/ibragazalee/Desktop/application files/HighFiveExpo/e2e/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/Users/ibragazalee/Desktop/application files/HighFiveExpo/e2e/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 45000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "results.json"
+        }
+      ],
+      [
+        "html",
+        {
+          "open": "never",
+          "outputFolder": "report"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.60.0",
+    "workers": 1,
+    "webServer": {
+      "command": "python3 -m http.server 8080 --directory ../dist",
+      "url": "http://localhost:8080",
+      "reuseExistingServer": true,
+      "timeout": 30000
+    }
+  },
+  "suites": [
+    {
+      "title": "admin.spec.ts",
+      "file": "admin.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Admin",
+          "file": "admin.spec.ts",
+          "line": 9,
+          "column": 6,
+          "specs": [
+            {
+              "title": "01 Admin login works",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1039,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Access to fetch at 'https://ipapi.co/json/' from origin 'http://localhost:8080' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:44:54.465Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-d0fe1ab93da1ea24864b",
+              "file": "admin.spec.ts",
+              "line": 10,
+              "column": 7
+            },
+            {
+              "title": "02 Admin dashboard loads",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1280,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Access to fetch at 'https://ipapi.co/json/' from origin 'http://localhost:8080' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:44:55.794Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-35032667ec399ed31701",
+              "file": "admin.spec.ts",
+              "line": 18,
+              "column": 7
+            },
+            {
+              "title": "03 Admin navigation works (Statistics)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1850,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Access to fetch at 'https://ipapi.co/json/' from origin 'http://localhost:8080' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:44:57.079Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-c422cc336018d7cabba1",
+              "file": "admin.spec.ts",
+              "line": 26,
+              "column": 7
+            },
+            {
+              "title": "04 Admin Professors Overview redirects",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1830,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Access to fetch at 'https://ipapi.co/json/' from origin 'http://localhost:8080' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:44:58.943Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-e0cb3f4767fdd02c2366",
+              "file": "admin.spec.ts",
+              "line": 35,
+              "column": 7
+            },
+            {
+              "title": "05 Admin Material Management opens",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1641,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Access to fetch at 'https://ipapi.co/json/' from origin 'http://localhost:8080' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:45:00.778Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-43721a2bc2cfc48f2217",
+              "file": "admin.spec.ts",
+              "line": 48,
+              "column": 7
+            },
+            {
+              "title": "06 Admin Pending Approvals tab opens",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2528,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Access to fetch at 'https://ipapi.co/json/' from origin 'http://localhost:8080' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:45:02.427Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-2269b1445b2bc6600a14",
+              "file": "admin.spec.ts",
+              "line": 59,
+              "column": 7
+            },
+            {
+              "title": "07 Admin Course Management folder opens",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 785,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "NOTE: admin \"Course Management\" item count = 0 (intentionally absent; professor-only).\n"
+                        },
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Access to fetch at 'https://ipapi.co/json/' from origin 'http://localhost:8080' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:45:04.962Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-c2453c57482a426c95f6",
+              "file": "admin.spec.ts",
+              "line": 73,
+              "column": 7
+            },
+            {
+              "title": "08 Admin Student Coordination folder opens",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2422,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Access to fetch at 'https://ipapi.co/json/' from origin 'http://localhost:8080' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:45:05.759Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-bb7f289476954fb7c6a5",
+              "file": "admin.spec.ts",
+              "line": 85,
+              "column": 7
+            },
+            {
+              "title": "09 Admin student profile opens",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2943,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Access to fetch at 'https://ipapi.co/json/' from origin 'http://localhost:8080' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:45:08.190Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-13abf015bcfd7e9c8fa7",
+              "file": "admin.spec.ts",
+              "line": 96,
+              "column": 7
+            },
+            {
+              "title": "10 Admin calendar page opens",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1660,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Access to fetch at 'https://ipapi.co/json/' from origin 'http://localhost:8080' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:45:11.140Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-ac1e23929ca10396a220",
+              "file": "admin.spec.ts",
+              "line": 109,
+              "column": 7
+            },
+            {
+              "title": "11 Admin can open event details",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3942,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Access to fetch at 'https://ipapi.co/json/' from origin 'http://localhost:8080' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:45:12.807Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-bbebb35e8ae6514daf7b",
+              "file": "admin.spec.ts",
+              "line": 118,
+              "column": 7
+            },
+            {
+              "title": "12 Admin notifications dropdown opens",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1912,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Access to fetch at 'https://ipapi.co/json/' from origin 'http://localhost:8080' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:45:16.757Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-92eb0da8100e50a612c2",
+              "file": "admin.spec.ts",
+              "line": 131,
+              "column": 7
+            },
+            {
+              "title": "13 Admin notification open-details redirects",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2932,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Access to fetch at 'https://ipapi.co/json/' from origin 'http://localhost:8080' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:45:18.676Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-61ec8cf6f6a23364a442",
+              "file": "admin.spec.ts",
+              "line": 141,
+              "column": 7
+            },
+            {
+              "title": "14 Admin Open Day folder opens",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2270,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Access to fetch at 'https://ipapi.co/json/' from origin 'http://localhost:8080' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.\",\"[console.error] Failed to load resource: net::ERR_FAILED\",\"[console.error] Failed to load resource: the server responded with a status of 404 ()\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:45:21.615Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-51f824707b67f2ed5b51",
+              "file": "admin.spec.ts",
+              "line": 158,
+              "column": 7
+            },
+            {
+              "title": "15 Admin settings page opens",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1710,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Access to fetch at 'https://ipapi.co/json/' from origin 'http://localhost:8080' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:45:23.892Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-a529ece1f1c0b67af7c2",
+              "file": "admin.spec.ts",
+              "line": 167,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "professor.spec.ts",
+      "file": "professor.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Professor",
+          "file": "professor.spec.ts",
+          "line": 7,
+          "column": 6,
+          "specs": [
+            {
+              "title": "16 Professor login works",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1333,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Failed to load resource: the server responded with a status of 406 ()\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:45:25.620Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "77fdd34cbc7bb5c6f0f2-838041b4f9f0361466b0",
+              "file": "professor.spec.ts",
+              "line": 8,
+              "column": 7
+            },
+            {
+              "title": "17 Professor dashboard loads",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 841,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: []\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:45:26.960Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "77fdd34cbc7bb5c6f0f2-f9b8d0a80cdb526ebfdf",
+              "file": "professor.spec.ts",
+              "line": 16,
+              "column": 7
+            },
+            {
+              "title": "18 Professor Course Overview opens",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2157,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Failed to load resource: the server responded with a status of 406 ()\",\"[console.error] Access to fetch at 'https://nkfthxagzjoimxxlwcrv.supabase.co/functions/v1/fetch-course-news' from origin 'http://localhost:8080' has been blocked by CORS policy: Request header field x-client-info is not allowed by Access-Control-Allow-Headers in preflight response.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:45:27.808Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "77fdd34cbc7bb5c6f0f2-aaa1bbd0850b64cc0f79",
+              "file": "professor.spec.ts",
+              "line": 25,
+              "column": 7
+            },
+            {
+              "title": "19 Professor can open a course",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4294,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Failed to load resource: the server responded with a status of 406 ()\",\"[console.error] Access to fetch at 'https://nkfthxagzjoimxxlwcrv.supabase.co/functions/v1/fetch-course-news' from origin 'http://localhost:8080' has been blocked by CORS policy: Request header field x-client-info is not allowed by Access-Control-Allow-Headers in preflight response.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:45:29.972Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "77fdd34cbc7bb5c6f0f2-199d87ed6adc6c6e9ba1",
+              "file": "professor.spec.ts",
+              "line": 34,
+              "column": 7
+            },
+            {
+              "title": "20 Professor can open student list inside a course",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4994,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Failed to load resource: the server responded with a status of 406 ()\",\"[console.error] Access to fetch at 'https://nkfthxagzjoimxxlwcrv.supabase.co/functions/v1/fetch-course-news' from origin 'http://localhost:8080' has been blocked by CORS policy: Request header field x-client-info is not allowed by Access-Control-Allow-Headers in preflight response.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:45:34.276Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "77fdd34cbc7bb5c6f0f2-22242069c7c8f6090bb7",
+              "file": "professor.spec.ts",
+              "line": 51,
+              "column": 7
+            },
+            {
+              "title": "21 Professor can open student profile",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 5662,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Failed to load resource: the server responded with a status of 406 ()\",\"[console.error] Access to fetch at 'https://nkfthxagzjoimxxlwcrv.supabase.co/functions/v1/fetch-course-news' from origin 'http://localhost:8080' has been blocked by CORS policy: Request header field x-client-info is not allowed by Access-Control-Allow-Headers in preflight response.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:45:39.283Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "77fdd34cbc7bb5c6f0f2-3e271acc0717aca54890",
+              "file": "professor.spec.ts",
+              "line": 68,
+              "column": 7
+            },
+            {
+              "title": "22 Professor Course Management folder opens",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2284,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Failed to load resource: the server responded with a status of 406 ()\",\"[console.error] Access to fetch at 'https://nkfthxagzjoimxxlwcrv.supabase.co/functions/v1/fetch-course-news' from origin 'http://localhost:8080' has been blocked by CORS policy: Request header field x-client-info is not allowed by Access-Control-Allow-Headers in preflight response.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:45:44.956Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "77fdd34cbc7bb5c6f0f2-b628e286db5d735d30de",
+              "file": "professor.spec.ts",
+              "line": 91,
+              "column": 7
+            },
+            {
+              "title": "23 Professor Material/Materials Management opens",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3719,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Failed to load resource: the server responded with a status of 406 ()\",\"[console.error] Access to fetch at 'https://nkfthxagzjoimxxlwcrv.supabase.co/functions/v1/fetch-course-news' from origin 'http://localhost:8080' has been blocked by CORS policy: Request header field x-client-info is not allowed by Access-Control-Allow-Headers in preflight response.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:45:47.249Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "77fdd34cbc7bb5c6f0f2-43fca5d44190c309d28c",
+              "file": "professor.spec.ts",
+              "line": 100,
+              "column": 7
+            },
+            {
+              "title": "24 Professor syllabus/scheme upload UI appears",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3739,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Failed to load resource: the server responded with a status of 406 ()\",\"[console.error] Access to fetch at 'https://nkfthxagzjoimxxlwcrv.supabase.co/functions/v1/fetch-course-news' from origin 'http://localhost:8080' has been blocked by CORS policy: Request header field x-client-info is not allowed by Access-Control-Allow-Headers in preflight response.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:45:50.975Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "77fdd34cbc7bb5c6f0f2-8ebcee388a57e893fcec",
+              "file": "professor.spec.ts",
+              "line": 117,
+              "column": 7
+            },
+            {
+              "title": "25 Professor Course Overlap page opens",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4523,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Failed to load resource: the server responded with a status of 406 ()\",\"[console.error] Access to fetch at 'https://nkfthxagzjoimxxlwcrv.supabase.co/functions/v1/fetch-course-news' from origin 'http://localhost:8080' has been blocked by CORS policy: Request header field x-client-info is not allowed by Access-Control-Allow-Headers in preflight response.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:45:54.725Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "77fdd34cbc7bb5c6f0f2-32bd793579d51876c893",
+              "file": "professor.spec.ts",
+              "line": 133,
+              "column": 7
+            },
+            {
+              "title": "26 Professor Run overlap check button visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4627,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Failed to load resource: the server responded with a status of 406 ()\",\"[console.error] Access to fetch at 'https://nkfthxagzjoimxxlwcrv.supabase.co/functions/v1/fetch-course-news' from origin 'http://localhost:8080' has been blocked by CORS policy: Request header field x-client-info is not allowed by Access-Control-Allow-Headers in preflight response.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:45:59.256Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "77fdd34cbc7bb5c6f0f2-116f264ab02778e49e0b",
+              "file": "professor.spec.ts",
+              "line": 150,
+              "column": 7
+            },
+            {
+              "title": "27 Professor Homework Assistance folder opens",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2199,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Failed to load resource: the server responded with a status of 406 ()\",\"[console.error] Access to fetch at 'https://nkfthxagzjoimxxlwcrv.supabase.co/functions/v1/fetch-course-news' from origin 'http://localhost:8080' has been blocked by CORS policy: Request header field x-client-info is not allowed by Access-Control-Allow-Headers in preflight response.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:46:03.889Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "77fdd34cbc7bb5c6f0f2-a520c75d2e779991d5bc",
+              "file": "professor.spec.ts",
+              "line": 167,
+              "column": 7
+            },
+            {
+              "title": "28 Professor Homework Checker opens",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3406,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Failed to load resource: the server responded with a status of 406 ()\",\"[console.error] Access to fetch at 'https://nkfthxagzjoimxxlwcrv.supabase.co/functions/v1/fetch-course-news' from origin 'http://localhost:8080' has been blocked by CORS policy: Request header field x-client-info is not allowed by Access-Control-Allow-Headers in preflight response.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:46:06.095Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "77fdd34cbc7bb5c6f0f2-90793ee3e3e9c950d099",
+              "file": "professor.spec.ts",
+              "line": 176,
+              "column": 7
+            },
+            {
+              "title": "29 Professor News folder opens",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3197,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Failed to load resource: the server responded with a status of 406 ()\",\"[console.error] Access to fetch at 'https://nkfthxagzjoimxxlwcrv.supabase.co/functions/v1/fetch-course-news' from origin 'http://localhost:8080' has been blocked by CORS policy: Request header field x-client-info is not allowed by Access-Control-Allow-Headers in preflight response.\",\"[console.error] Failed to load resource: net::ERR_FAILED\",\"[console.error] Access to fetch at 'https://nkfthxagzjoimxxlwcrv.supabase.co/functions/v1/fetch-course-news' from origin 'http://localhost:8080' has been blocked by CORS policy: Request header field x-client-info is not allowed by Access-Control-Allow-Headers in preflight response.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:46:09.508Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "77fdd34cbc7bb5c6f0f2-625c4e41a13a4a3b486c",
+              "file": "professor.spec.ts",
+              "line": 188,
+              "column": 7
+            },
+            {
+              "title": "30 Professor Calendar page opens",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2903,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Failed to load resource: the server responded with a status of 406 ()\",\"[console.error] Access to fetch at 'https://nkfthxagzjoimxxlwcrv.supabase.co/functions/v1/fetch-course-news' from origin 'http://localhost:8080' has been blocked by CORS policy: Request header field x-client-info is not allowed by Access-Control-Allow-Headers in preflight response.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:46:12.712Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "77fdd34cbc7bb5c6f0f2-33a6465ef95e6144b12c",
+              "file": "professor.spec.ts",
+              "line": 199,
+              "column": 7
+            },
+            {
+              "title": "31 Professor notifications dropdown opens",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1456,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Failed to load resource: the server responded with a status of 406 ()\",\"[console.error] Access to fetch at 'https://nkfthxagzjoimxxlwcrv.supabase.co/functions/v1/fetch-course-news' from origin 'http://localhost:8080' has been blocked by CORS policy: Request header field x-client-info is not allowed by Access-Control-Allow-Headers in preflight response.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:46:15.623Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "77fdd34cbc7bb5c6f0f2-275825ff17c56c8d3b60",
+              "file": "professor.spec.ts",
+              "line": 209,
+              "column": 7
+            },
+            {
+              "title": "32 Professor notification open-details redirects",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3334,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Failed to load resource: the server responded with a status of 406 ()\",\"[console.error] Access to fetch at 'https://nkfthxagzjoimxxlwcrv.supabase.co/functions/v1/fetch-course-news' from origin 'http://localhost:8080' has been blocked by CORS policy: Request header field x-client-info is not allowed by Access-Control-Allow-Headers in preflight response.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:46:17.085Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "77fdd34cbc7bb5c6f0f2-00e0041991aaacb6c792",
+              "file": "professor.spec.ts",
+              "line": 219,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "shared.spec.ts",
+      "file": "shared.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Shared / System",
+          "file": "shared.spec.ts",
+          "line": 7,
+          "column": 6,
+          "specs": [
+            {
+              "title": "33 App does not crash on refresh",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4001,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Access to fetch at 'https://ipapi.co/json/' from origin 'http://localhost:8080' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.\",\"[console.error] Failed to load resource: net::ERR_FAILED\",\"[console.error] Access to fetch at 'https://ipapi.co/json/' from origin 'http://localhost:8080' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:46:20.434Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d40cd94164d55aab7294-ecd917408c6a3aca69f9",
+              "file": "shared.spec.ts",
+              "line": 8,
+              "column": 7
+            },
+            {
+              "title": "34 Protected content not shown when logged out",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 332,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "NOTE: app has no URL routing — protected screens are unreachable without an in-memory session.\n"
+                        },
+                        {
+                          "text": "CONSOLE_ERRORS: []\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:46:24.442Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d40cd94164d55aab7294-8ea8bbbf3e06f9f34774",
+              "file": "shared.spec.ts",
+              "line": 22,
+              "column": 7
+            },
+            {
+              "title": "35 Logout works for admin",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2314,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Access to fetch at 'https://ipapi.co/json/' from origin 'http://localhost:8080' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:46:24.779Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d40cd94164d55aab7294-12605240ffb281fdc0b3",
+              "file": "shared.spec.ts",
+              "line": 33,
+              "column": 7
+            },
+            {
+              "title": "36 Logout works for professor",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2416,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Failed to load resource: the server responded with a status of 406 ()\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:46:27.101Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d40cd94164d55aab7294-cf7a40ef743bb6ccc901",
+              "file": "shared.spec.ts",
+              "line": 43,
+              "column": 7
+            },
+            {
+              "title": "37 Wrong credentials show an error",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1134,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Failed to load resource: the server responded with a status of 400 ()\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:46:29.525Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d40cd94164d55aab7294-f94dbb29c061e6ec350f",
+              "file": "shared.spec.ts",
+              "line": 53,
+              "column": 7
+            },
+            {
+              "title": "38 Professor-only pages hidden from admin",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1113,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Access to fetch at 'https://ipapi.co/json/' from origin 'http://localhost:8080' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.\",\"[console.error] Failed to load resource: net::ERR_FAILED\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:46:30.677Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d40cd94164d55aab7294-2d219ed076c7e6c351ff",
+              "file": "shared.spec.ts",
+              "line": 67,
+              "column": 7
+            },
+            {
+              "title": "39 Admin-only pages hidden from professor",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 995,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: []\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:46:31.804Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d40cd94164d55aab7294-0c350b7cad5a2e316496",
+              "file": "shared.spec.ts",
+              "line": 77,
+              "column": 7
+            },
+            {
+              "title": "40 Supabase-connected pages load without blank screens / console errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 45000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6533,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CONSOLE_ERRORS: [\"[console.error] Access to fetch at 'https://ipapi.co/json/' from origin 'http://localhost:8080' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.\",\"[console.error] Failed to load resource: net::ERR_FAILED\",\"[console.error] Failed to load resource: the server responded with a status of 404 ()\"]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-05T08:46:32.806Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d40cd94164d55aab7294-7ceeb98fd05412462000",
+              "file": "shared.spec.ts",
+              "line": 87,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-06-05T08:44:53.549Z",
+    "duration": 106056.49,
+    "expected": 40,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

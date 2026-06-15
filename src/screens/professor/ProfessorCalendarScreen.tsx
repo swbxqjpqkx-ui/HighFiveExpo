@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity,
   Modal, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
+import { useRoute } from '@react-navigation/native';
 import { getProfessorCalendarEvents, createProfessorCalendarEvent } from '../../services/supabase';
 import { AdminCalendarEvent, Profile } from '../../types';
 import { normalizeDateInput, normalizeTimeInput } from '../../utils/calendarInput';
@@ -139,6 +140,19 @@ const ProfessorCalendarScreen: React.FC<Props> = ({ profile }) => {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [profile.id]);
+
+  // When opened from the home-page calendar widget, jump straight to the tapped
+  // event's day and open the existing day-details modal. `focusNonce` re-triggers
+  // this on repeat taps of the same date.
+  const route = useRoute<any>();
+  const focusDate: string | undefined = route.params?.focusDate;
+  const focusNonce = route.params?.focusNonce;
+  useEffect(() => {
+    if (focusDate) {
+      setSelectedDate(focusDate);
+      setShowDayDetails(true);
+    }
+  }, [focusDate, focusNonce]);
 
   // Build calendar grid
   const firstDay = new Date(year, month, 1).getDay();

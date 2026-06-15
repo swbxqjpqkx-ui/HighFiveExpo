@@ -214,7 +214,7 @@ const CourseDetail: React.FC<DetailProps> = ({ course, profile, initialTab, focu
         style={ds.tabBar}
         contentContainerStyle={ds.tabBarContent}
       >
-        {TABS.map(tab => {
+        {TABS.filter(tab => tab.key !== 'alerts').map(tab => {
           const isActive = activeTab === tab.key;
           const isDisabled = tab.key === 'materials' && (!syllabus || syllabus.status !== 'locked');
           return (

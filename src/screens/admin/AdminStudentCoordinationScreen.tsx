@@ -9,6 +9,8 @@ import {
   getAllWarningsForAdmin, getRiskSettings, saveRiskSettings, runRiskDetection,
 } from '../../services/riskService';
 import { supabase } from '../../services/supabase';
+import { Course } from '../../types';
+import CourseStudentDetailModal from '../../components/CourseStudentDetailModal';
 import { Green, Ink, Tint } from '../../theme';
 
 // ── Palette ────────────────────────────────────────────────────────────────────
@@ -58,11 +60,12 @@ const filtersActive = (f: Filters) =>
 
 // ── WarningCard ────────────────────────────────────────────────────────────────
 interface WarningCardProps {
-  warning:  RiskWarning;
-  settings: RiskSettings | null;
-  dimmed?:  boolean;
+  warning:        RiskWarning;
+  settings:       RiskSettings | null;
+  dimmed?:        boolean;
+  onViewProfile:  () => void;
 }
-const WarningCard: React.FC<WarningCardProps> = ({ warning: w, settings, dimmed }) => {
+const WarningCard: React.FC<WarningCardProps> = ({ warning: w, settings, dimmed, onViewProfile }) => {
   const rc        = REASON_COLOR(w.risk_reason);
   const gradeBad  = w.grade_percentage   !== null && settings !== null
     && w.grade_percentage < settings.grade_limit_percentage;
@@ -77,8 +80,13 @@ const WarningCard: React.FC<WarningCardProps> = ({ warning: w, settings, dimmed 
   return (
     <View style={[s.card, { borderLeftColor: rc }, dimmed && s.cardDimmed]}>
 
-      {/* Header */}
-      <View style={s.cardTop}>
+      {/* Header (tap to open full student profile) */}
+      <TouchableOpacity
+        style={s.cardTop}
+        onPress={onViewProfile}
+        activeOpacity={0.7}
+        accessibilityLabel={`View profile for ${w.student_name}`}
+      >
         <View style={{ flex: 1 }}>
           <Text style={s.studentName}>{w.student_name}</Text>
           {!!w.student_email && <Text style={s.studentEmail}>{w.student_email}</Text>}
@@ -87,7 +95,7 @@ const WarningCard: React.FC<WarningCardProps> = ({ warning: w, settings, dimmed 
         <View style={[s.badge, { backgroundColor: statusBg, borderColor: statusBdr }]}>
           <Text style={[s.badgeText, { color: statusTxt }]}>{statusLbl}</Text>
         </View>
-      </View>
+      </TouchableOpacity>
 
       {/* Professor box */}
       <View style={s.professorBox}>
@@ -134,6 +142,15 @@ const WarningCard: React.FC<WarningCardProps> = ({ warning: w, settings, dimmed 
       <View style={[s.reasonBox, { backgroundColor: rc + '18', borderColor: rc + '40' }]}>
         <Text style={[s.reasonText, { color: rc }]}>⚠  {w.risk_reason}</Text>
       </View>
+
+      {/* View full profile (opens popup; existing card info is unchanged) */}
+      <TouchableOpacity
+        style={s.viewProfileBtn}
+        onPress={onViewProfile}
+        activeOpacity={0.75}
+      >
+        <Text style={s.viewProfileBtnText}>👤  View Profile</Text>
+      </TouchableOpacity>
 
       {/* Email tracking */}
       <View style={s.emailTrackRow}>
@@ -201,6 +218,9 @@ const AdminStudentCoordinationScreen: React.FC = () => {
   const [draft,      setDraft]      = useState<Filters>(DEFAULT_FILTERS);
   const [filterOpen, setFilterOpen] = useState(false);
   const [search,     setSearch]     = useState('');
+
+  // Student profile preview modal (reuses the Course Overview profile component)
+  const [profileTarget, setProfileTarget] = useState<RiskWarning | null>(null);
 
   // ── Load ────────────────────────────────────────────────────────────
   const load = useCallback(async (isRefresh = false) => {
@@ -473,7 +493,7 @@ const AdminStudentCoordinationScreen: React.FC = () => {
               <Text style={s.resultCount}>{filteredActive.length} record{filteredActive.length !== 1 ? 's' : ''}</Text>
             </View>
             {filteredActive.map(w => (
-              <WarningCard key={w.id} warning={w} settings={settings} />
+              <WarningCard key={w.id} warning={w} settings={settings} onViewProfile={() => setProfileTarget(w)} />
             ))}
           </>
         )}
@@ -486,7 +506,7 @@ const AdminStudentCoordinationScreen: React.FC = () => {
               <Text style={s.resultCount}>{filteredResolved.length} record{filteredResolved.length !== 1 ? 's' : ''}</Text>
             </View>
             {filteredResolved.map(w => (
-              <WarningCard key={w.id} warning={w} settings={settings} dimmed />
+              <WarningCard key={w.id} warning={w} settings={settings} dimmed onViewProfile={() => setProfileTarget(w)} />
             ))}
           </>
         )}
@@ -649,6 +669,26 @@ const AdminStudentCoordinationScreen: React.FC = () => {
           </KeyboardAvoidingView>
         </View>
       </Modal>
+
+      {/* ══ STUDENT PROFILE PREVIEW MODAL ══ */}
+      {/* Reuses the same profile component shown from Course Overview.        */}
+      {/* Closing it clears the target and returns to this list — no nav.      */}
+      <CourseStudentDetailModal
+        visible={!!profileTarget}
+        onClose={() => setProfileTarget(null)}
+        student={profileTarget ? {
+          id:             profileTarget.student_id,
+          full_name:      profileTarget.student_name,
+          grade:          profileTarget.grade_percentage,
+          missed_classes: profileTarget.missed_classes_count,
+        } : null}
+        currentCourse={{
+          id:       profileTarget?.course_id   ?? '',
+          name:     profileTarget?.course_name ?? '',
+          program:  profileTarget?.program     ?? undefined,
+          semester: profileTarget?.semester    ?? undefined,
+        } as Course}
+      />
     </View>
   );
 };
@@ -752,6 +792,13 @@ const s = StyleSheet.create({
 
   reasonBox:  { borderWidth: 1, borderRadius: 8, padding: 10, marginBottom: 8 },
   reasonText: { fontSize: 12, fontWeight: '700', lineHeight: 17 },
+
+  viewProfileBtn: {
+    borderWidth: 1.5, borderColor: C.blueBdr, backgroundColor: C.blueBg,
+    borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12,
+    alignItems: 'center', marginBottom: 8,
+  },
+  viewProfileBtnText: { fontSize: 12, fontWeight: '700', color: C.blue },
 
   // Email tracking
   emailTrackRow:  { flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginBottom: 4 },

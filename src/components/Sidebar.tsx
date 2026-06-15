@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { DrawerContentScrollView, DrawerContentComponentProps } from '@react-navigation/drawer';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, Rect, Polyline, Line, Circle, Polygon } from 'react-native-svg';
@@ -93,19 +93,11 @@ const IcoLogout = ({ color = ICON_COLOR, size = ICON_SIZE }) => (
 // Brand mark — 5-bar high-five glyph
 const BrandMark = () => (
   <View style={s.brandMark}>
-    <LinearGradient
-      colors={['#46c98e', '#2aa274', '#1f7a52']}
-      start={{ x: 0.3, y: 0 }}
-      end={{ x: 0.7, y: 1 }}
-      style={StyleSheet.absoluteFill}
+    <Image
+      source={require('../../assets/images/highfive-logo.png')}
+      style={{ width: '100%', height: '100%' }}
+      resizeMode="contain"
     />
-    <Svg width={24} height={24} viewBox="0 0 24 24">
-      <Rect x="3"    y="9" width="2.6" height="11" rx="1.3" fill="#0a1f17"/>
-      <Rect x="6.8"  y="6" width="2.6" height="14" rx="1.3" fill="#0a1f17"/>
-      <Rect x="10.7" y="3" width="2.6" height="17" rx="1.3" fill="#0a1f17"/>
-      <Rect x="14.6" y="6" width="2.6" height="14" rx="1.3" fill="#0a1f17"/>
-      <Rect x="18.4" y="9" width="2.6" height="11" rx="1.3" fill="#0a1f17"/>
-    </Svg>
   </View>
 );
 
@@ -113,7 +105,7 @@ type NavItem = { label: string; screen: string; Icon: React.FC<{ color?: string;
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Home',                 screen: 'Home',              Icon: IcoHome      },
-  { label: 'Course Overview',      screen: 'Courses',           Icon: IcoBook      },
+  { label: 'Class Overview',       screen: 'Courses',           Icon: IcoBook      },
   // 'Student List' is intentionally hidden from the professor sidebar.
   // The route, screen (StudentListScreen) and data connection are preserved
   // and still registered in MainNavigator — only the menu item is hidden.
@@ -121,7 +113,7 @@ const NAV_ITEMS: NavItem[] = [
   // { label: 'Student List',         screen: 'StudentList',       Icon: IcoUsers     },
   { label: 'Course Management',    screen: 'CourseManagement',  Icon: IcoFolder    },
   { label: 'Homework Assistance',  screen: 'HomeworkAssistance',Icon: IcoPencil    },
-  { label: 'Warnings',             screen: 'Warnings',          Icon: IcoWarning   },
+  { label: 'Students at Risk',     screen: 'Warnings',          Icon: IcoWarning   },
   { label: 'News',                 screen: 'News',              Icon: IcoNewspaper },
   { label: 'Calendar',             screen: 'Calendar',          Icon: IcoCalendar  },
 ];

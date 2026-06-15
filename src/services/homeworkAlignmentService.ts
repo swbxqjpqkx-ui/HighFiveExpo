@@ -195,7 +195,6 @@ export const runHomeworkAlignmentCheck = async (
   relatedCourses: RelatedCourse[],
   accreditation: string,
 ): Promise<Omit<HomeworkAlignmentCheck, 'id' | 'professor_id' | 'course_id' | 'course_name' | 'created_at' | 'updated_at'>> => {
-  if (Platform.OS === 'web') throw new Error(WEB_PREVIEW_MESSAGE);
   // Fetch scheme of work document if available
   const sowDoc = courseContext.schemeOfWorkFileUrl
     ? await fetchDocumentAsBase64(courseContext.schemeOfWorkFileUrl)

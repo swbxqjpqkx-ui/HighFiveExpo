@@ -197,7 +197,6 @@ export const runHomeworkCheckerBatch = async (
   studentFiles: StudentFile[],
   enrolledStudents: EnrolledStudent[],
 ): Promise<HomeworkGradingBatch> => {
-  if (Platform.OS === 'web') throw new Error(WEB_PREVIEW_MESSAGE);
   const batchId = `batch-${Date.now()}`;
   const now     = new Date().toISOString();
   const results: HomeworkStudentResult[] = [];

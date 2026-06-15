@@ -159,7 +159,8 @@ const StudentDetail: React.FC<{
   enrolledStudents: EnrolledStudent[];
   onBack: () => void;
   onUpdate: (updated: HomeworkStudentResult) => void;
-}> = ({ result, batchTitle, enrolledStudents, onBack, onUpdate }) => {
+  onApproved: () => void;
+}> = ({ result, batchTitle, enrolledStudents, onBack, onUpdate, onApproved }) => {
   const [overrideGrade,  setOverrideGrade]  = useState(
     result.professor_edited_grade !== undefined ? String(result.professor_edited_grade) : '',
   );
@@ -267,7 +268,7 @@ const StudentDetail: React.FC<{
       Alert.alert(
         '✓ Approved',
         'Homework feedback saved. It will now appear in the student\'s course profile.',
-        [{ text: 'OK' }],
+        [{ text: 'OK', onPress: onApproved }],
       );
     }
   };
@@ -550,6 +551,13 @@ const BatchResults: React.FC<{
       <Text style={s.screenTitle}>{batch.assignment_title}</Text>
       <Text style={s.subtitle}>{batch.course_name} — {batch.student_results.length} students analysed</Text>
 
+      {/* Saved-to-history confirmation */}
+      <View style={s.savedBanner}>
+        <Text style={s.savedBannerText}>
+          ✓ Saved to Homework History — open any student to set status (✓ approve / ✗ reject / ⏳ waiting) and edit comments anytime.
+        </Text>
+      </View>
+
       {/* Summary row */}
       <View style={s.batchSummaryRow}>
         <View style={s.batchStat}>
@@ -783,6 +791,7 @@ const HomeworkCheckerView: React.FC<Props> = ({ onBack, courses, professorId }) 
         enrolledStudents={enrolledStudents}
         onBack={() => setView('batch')}
         onUpdate={handleUpdateStudent}
+        onApproved={onBack}
       />
     );
   }
@@ -1057,6 +1066,12 @@ const s = StyleSheet.create({
   },
   csvBtnText: { color: C.card, fontSize: 12, fontWeight: '700' },
   csvMsg:     { fontSize: 12, color: C.forest, fontWeight: '600', marginBottom: 8 },
+
+  savedBanner: {
+    backgroundColor: C.green50, borderRadius: 10, padding: 12,
+    borderWidth: 1, borderColor: C.border, marginBottom: 14,
+  },
+  savedBannerText: { fontSize: 12, color: C.forest, fontWeight: '600', lineHeight: 18 },
 
   matchWarningBox: {
     backgroundColor: C.amberBg, borderRadius: 10, padding: 12,

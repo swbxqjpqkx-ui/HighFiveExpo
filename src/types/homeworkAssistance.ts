@@ -123,3 +123,57 @@ export interface HomeworkHistoryItem {
   student_count?: number;
   created_at: string;
 }
+
+// ── Homework History (professor-only, graded homework) ────────────────────────
+// Flattened per-student view of saved AI grading results, joined with their
+// parent grading batch. Reuses the existing homework_grading_batches +
+// homework_student_results tables — no new table.
+
+export interface HomeworkHistoryRecord {
+  id: string;                 // homework_student_results.id
+  batch_id: string;
+  professor_id: string;
+
+  // Context
+  course_id: string;
+  course_name: string;
+  assignment_title: string;
+  topic_name?: string;        // not stored yet — shown only when available
+
+  // Student
+  student_id?: string;
+  student_name: string;
+
+  // Submission
+  uploaded_file_name: string;
+  submission_file_url: string;
+
+  // Rubric used (from parent batch)
+  rubric_used: string;
+
+  // AI output
+  grade_justification: string;
+  strengths: string[];
+  weaknesses: string[];
+  improvement_recommendations: string[];
+  missing_requirements: string[];
+  plagiarism_risk_summary: string;
+  student_feedback_draft: string;
+  original_ai_feedback?: string;
+
+  // Scores
+  overall_suggested_grade: number;
+  professor_edited_grade?: number;
+  grade_points?: number;
+  total_points?: number;
+
+  // Professor review
+  professor_edited_feedback?: string;
+  professor_note?: string;
+  professor_status: 'pending' | 'approved' | 'rejected' | 'draft';
+  approved_at?: string;
+
+  // Dates
+  checked_at: string;         // created_at
+  updated_at: string;
+}

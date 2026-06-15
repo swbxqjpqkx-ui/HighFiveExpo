@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions, Image } from 'react-native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { DrawerContentScrollView, DrawerContentComponentProps } from '@react-navigation/drawer';
 import { DrawerActions } from '@react-navigation/native';
@@ -123,19 +123,11 @@ const IcoPyramid = ({ color = ICON_COLOR, size = ICON_SIZE }) => (
 // Brand mark — 5-bar high-five glyph
 const BrandMark = () => (
   <View style={sb.brandMark}>
-    <LinearGradient
-      colors={['#46c98e', '#2aa274', '#1f7a52']}
-      start={{ x: 0.3, y: 0 }}
-      end={{ x: 0.7, y: 1 }}
-      style={StyleSheet.absoluteFill}
+    <Image
+      source={require('../../assets/images/highfive-logo.png')}
+      style={{ width: '100%', height: '100%' }}
+      resizeMode="contain"
     />
-    <Svg width={24} height={24} viewBox="0 0 24 24">
-      <Rect x="3"    y="9" width="2.6" height="11" rx="1.3" fill="#0a1f17"/>
-      <Rect x="6.8"  y="6" width="2.6" height="14" rx="1.3" fill="#0a1f17"/>
-      <Rect x="10.7" y="3" width="2.6" height="17" rx="1.3" fill="#0a1f17"/>
-      <Rect x="14.6" y="6" width="2.6" height="14" rx="1.3" fill="#0a1f17"/>
-      <Rect x="18.4" y="9" width="2.6" height="11" rx="1.3" fill="#0a1f17"/>
-    </Svg>
   </View>
 );
 
@@ -147,7 +139,7 @@ const MAIN_NAV: NavItem[] = [
   { name: 'AdminStats',                label: 'Statistics',           Icon: IcoBarChart  },
   { name: 'AdminStudentCoordination',  label: 'Student Coordination', Icon: IcoUsers     },
   { name: 'AdminStudentList',          label: 'Student List',         Icon: IcoUsers     },
-  { name: 'AdminAccreditation',        label: 'Material Management',  Icon: IcoFolder    },
+  { name: 'AdminAccreditation',        label: 'Course Management',    Icon: IcoFolder    },
   { name: 'AdminOpenDay',              label: 'Open Day',             Icon: IcoPyramid   },
   { name: 'AdminCalendar',             label: 'Calendar',             Icon: IcoCalendar  },
   { name: 'AdminTasks',                label: 'Tasks',                Icon: IcoCheck     },
@@ -411,7 +403,7 @@ const AdminNavigator: React.FC<Props> = ({ profile, onLogout }) => {
       <Drawer.Screen name="AdminStudentList" options={{ title: 'Student List' }}>
         {() => <StudentListScreen profile={profile} courses={[]} />}
       </Drawer.Screen>
-      <Drawer.Screen name="AdminAccreditation" options={{ title: 'Material Management' }}>
+      <Drawer.Screen name="AdminAccreditation" options={{ title: 'Course Management' }}>
         {() => <AdminAccreditationScreen profile={profile} overlapFocusNonce={overlapFocusNonce} />}
       </Drawer.Screen>
       <Drawer.Screen name="AdminOpenDay" options={{ title: 'Open Day' }}>

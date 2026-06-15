@@ -15,6 +15,7 @@ import {
   getTopAdminNews, togglePinAdminArticle,
 } from '../../services/adminNewsService';
 import { Green, Ink, Tint } from '../../theme';
+import { getUpcomingCalendarItemsForHome } from '../../utils/homeCalendar';
 
 const C = {
   green50:  Green[50],
@@ -159,8 +160,8 @@ const ProfessorsOverviewCard: React.FC = () => {
   return (
     <TouchableOpacity activeOpacity={0.9} onPress={() => navigation.navigate('AdminAccreditation')} style={cardStyles.card}>
       <View style={cardStyles.header}>
-        <Text style={cardStyles.title}>Professors Overview</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('AdminProfessors')}>
+        <Text style={cardStyles.title}>Course Management</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('AdminAccreditation')}>
           <Text style={cardStyles.viewAll}>View all →</Text>
         </TouchableOpacity>
       </View>
@@ -255,32 +256,44 @@ interface CalendarCardProps { events: AdminCalendarEvent[]; }
 
 const CalendarTimelineCard: React.FC<CalendarCardProps> = ({ events }) => {
   const navigation = useNavigation<any>();
+  // Upcoming-only from the real admin_calendar records: finished events drop off,
+  // today's upcoming shown in full, otherwise the closest 4 future records.
+  const upcoming = getUpcomingCalendarItemsForHome(events);
   return (
-    <View style={cardStyles.card}>
+    <TouchableOpacity activeOpacity={1} style={cardStyles.card} onPress={() => navigation.navigate('AdminCalendar')}>
       <View style={cardStyles.header}>
         <Text style={cardStyles.title}>Today's Calendar</Text>
         <TouchableOpacity onPress={() => navigation.navigate('AdminCalendar')}>
           <Text style={cardStyles.viewAll}>View all →</Text>
         </TouchableOpacity>
       </View>
-      {events.map((ev, idx) => (
-        <View key={ev.id} style={calStyles.row}>
-          {/* Time */}
-          <Text style={calStyles.time}>{ev.time}</Text>
-          {/* Rail */}
-          <View style={calStyles.rail}>
-            <View style={[calStyles.dot, { backgroundColor: ev.color ?? C.green600 }]} />
-            {idx < events.length - 1 && <View style={calStyles.line} />}
-          </View>
-          {/* Event card */}
-          <View style={[calStyles.evCard, { backgroundColor: (ev.color ?? C.green600) + '18' }]}>
-            <Text style={[calStyles.evTitle, { color: ev.color ?? C.green600 }]}>{ev.title}</Text>
-            <Text style={calStyles.evLoc}>📍 {ev.location}</Text>
-            {ev.end_time && <Text style={calStyles.evTime}>{ev.time} – {ev.end_time}</Text>}
-          </View>
-        </View>
-      ))}
-    </View>
+      {upcoming.length === 0 ? (
+        <Text style={calStyles.empty}>No upcoming plans yet.</Text>
+      ) : (
+        upcoming.map((ev, idx) => (
+          <TouchableOpacity
+            key={ev.id}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('AdminCalendar', { focusDate: ev.date, focusNonce: Date.now() })}
+            style={calStyles.row}
+          >
+            {/* Time */}
+            <Text style={calStyles.time}>{ev.time}</Text>
+            {/* Rail */}
+            <View style={calStyles.rail}>
+              <View style={[calStyles.dot, { backgroundColor: ev.color ?? C.green600 }]} />
+              {idx < upcoming.length - 1 && <View style={calStyles.line} />}
+            </View>
+            {/* Event card */}
+            <View style={[calStyles.evCard, { backgroundColor: (ev.color ?? C.green600) + '18' }]}>
+              <Text style={[calStyles.evTitle, { color: ev.color ?? C.green600 }]}>{ev.title}</Text>
+              <Text style={calStyles.evLoc}>📍 {ev.location}</Text>
+              {ev.end_time && <Text style={calStyles.evTime}>{ev.time} – {ev.end_time}</Text>}
+            </View>
+          </TouchableOpacity>
+        ))
+      )}
+    </TouchableOpacity>
   );
 };
 
@@ -294,6 +307,7 @@ const calStyles = StyleSheet.create({
   evTitle: { fontFamily: 'Montserrat-Bold', fontSize: 13, lineHeight: 18 },
   evLoc:   { fontFamily: 'Montserrat-Medium', fontSize: 11, color: C.muted },
   evTime:  { fontFamily: 'Montserrat-SemiBold', fontSize: 10.5, color: C.soft, marginTop: 4 },
+  empty:   { fontFamily: 'Montserrat-Medium', fontSize: 13, color: C.muted, textAlign: 'center', paddingVertical: 12 },
 });
 
 // ── Tasks Card ────────────────────────────────────────────────────────────────
@@ -325,7 +339,7 @@ const TasksCard: React.FC<TasksCardProps> = ({ tasks: initialTasks }) => {
   };
 
   return (
-    <View style={cardStyles.card}>
+    <TouchableOpacity activeOpacity={1} style={cardStyles.card} onPress={() => navigation.navigate('AdminTasks')}>
       <View style={cardStyles.header}>
         <Text style={cardStyles.title}>Tasks</Text>
         <TouchableOpacity onPress={() => navigation.navigate('AdminTasks')}>
@@ -363,7 +377,7 @@ const TasksCard: React.FC<TasksCardProps> = ({ tasks: initialTasks }) => {
           <Text style={taskStyles.addBtnText}>+</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 

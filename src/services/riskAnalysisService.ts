@@ -31,7 +31,6 @@ const buildCompactPayload = (students: AtRiskStudent[]) =>
 export const analyzeAtRiskStudents = async (
   students: AtRiskStudent[],
 ): Promise<RiskAnalysis> => {
-  if (Platform.OS === 'web') throw new Error(WEB_PREVIEW_MESSAGE);
   if (students.length === 0) {
     return {
       summary:          'No at-risk students detected. All students are meeting the defined thresholds.',

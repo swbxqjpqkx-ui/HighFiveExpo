@@ -4,8 +4,9 @@ import {
   ActivityIndicator, RefreshControl, TextInput,
   Modal, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
-import { Profile } from '../types';
+import { Profile, Course } from '../types';
 import { useInstitution } from '../context/InstitutionContext';
+import CourseStudentDetailModal from '../components/CourseStudentDetailModal';
 import {
   RiskWarning, RiskSettings, ProfessorEmptyReason,
   fetchProfessorAtRiskStudents,
@@ -133,11 +134,12 @@ interface CardProps {
   onEmailCourse:  () => void;
   onEmailAbsence: () => void;
   onResolve:      () => void;
+  onViewProfile:  () => void;
 }
 
 const WarningCard: React.FC<CardProps> = ({
   warning, settings, dimmed, highlighted, onLayoutY,
-  onEmailCourse, onEmailAbsence, onResolve,
+  onEmailCourse, onEmailAbsence, onResolve, onViewProfile,
 }) => {
   const rc         = reasonColor(warning.risk_reason);
   const gradeBad   = warning.grade_percentage       !== null && warning.grade_percentage       <  settings.grade_limit_percentage;
@@ -151,8 +153,13 @@ const WarningCard: React.FC<CardProps> = ({
       onLayout={onLayoutY ? e => onLayoutY(e.nativeEvent.layout.y) : undefined}
     >
 
-      {/* Header */}
-      <View style={s.cardHeader}>
+      {/* Header (tap to open full student profile) */}
+      <TouchableOpacity
+        style={s.cardHeader}
+        onPress={onViewProfile}
+        activeOpacity={0.7}
+        accessibilityLabel={`View profile for ${warning.student_name}`}
+      >
         <View style={{ flex: 1 }}>
           <Text style={[s.studentName, dimmed && { color: C.inkMid }]}>{warning.student_name}</Text>
           {!!warning.student_email && <Text style={s.studentEmail}>{warning.student_email}</Text>}
@@ -167,7 +174,7 @@ const WarningCard: React.FC<CardProps> = ({
             {isActive ? 'Active' : 'Resolved'}
           </Text>
         </View>
-      </View>
+      </TouchableOpacity>
 
       {/* Meta tags */}
       <View style={s.tagRow}>
@@ -213,6 +220,15 @@ const WarningCard: React.FC<CardProps> = ({
       <View style={[s.reasonBox, { backgroundColor: rc + '18', borderColor: rc + '40' }]}>
         <Text style={[s.reasonText, { color: dimmed ? C.inkMid : rc }]}>⚠  {warning.risk_reason}</Text>
       </View>
+
+      {/* View full profile (opens popup; does not affect any existing action) */}
+      <TouchableOpacity
+        style={s.viewProfileBtn}
+        onPress={onViewProfile}
+        activeOpacity={0.75}
+      >
+        <Text style={s.viewProfileBtnText}>👤  View Profile</Text>
+      </TouchableOpacity>
 
       {/* Email status badges */}
       <View style={s.emailStatusRow}>
@@ -318,6 +334,9 @@ const WarningsScreen: React.FC<Props> = ({ profile, focus }) => {
   const [resolveTarget, setResolveTarget] = useState<RiskWarning | null>(null);
   const [resolveNote,   setResolveNote]   = useState('');
   const [resolving,     setResolving]     = useState(false);
+
+  // Student profile preview modal (reuses the Course Overview profile component)
+  const [profileTarget, setProfileTarget] = useState<RiskWarning | null>(null);
 
   // ── Load ─────────────────────────────────────────────────────────────────────
   const load = useCallback(async (isRefresh = false) => {
@@ -647,6 +666,7 @@ const WarningsScreen: React.FC<Props> = ({ profile, focus }) => {
               onEmailCourse={() => openEmailCourseHelp(w)}
               onEmailAbsence={() => openEmailAbsencePolicy(w)}
               onResolve={() => openResolveModal(w)}
+              onViewProfile={() => setProfileTarget(w)}
             />
           ))
         )}
@@ -671,6 +691,7 @@ const WarningsScreen: React.FC<Props> = ({ profile, focus }) => {
                 onEmailCourse={() => {}}
                 onEmailAbsence={() => {}}
                 onResolve={() => {}}
+                onViewProfile={() => setProfileTarget(w)}
               />
             ))}
           </>
@@ -843,6 +864,26 @@ const WarningsScreen: React.FC<Props> = ({ profile, focus }) => {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* ══ STUDENT PROFILE PREVIEW MODAL ══ */}
+      {/* Reuses the same profile component shown from Course Overview.        */}
+      {/* Closing it simply clears the target and returns to this risk list.   */}
+      <CourseStudentDetailModal
+        visible={!!profileTarget}
+        onClose={() => setProfileTarget(null)}
+        student={profileTarget ? {
+          id:             profileTarget.student_id,
+          full_name:      profileTarget.student_name,
+          grade:          profileTarget.grade_percentage,
+          missed_classes: profileTarget.missed_classes_count,
+        } : null}
+        currentCourse={{
+          id:       profileTarget?.course_id   ?? '',
+          name:     profileTarget?.course_name ?? '',
+          program:  profileTarget?.program     ?? undefined,
+          semester: profileTarget?.semester    ?? undefined,
+        } as Course}
+      />
     </View>
   );
 };
@@ -937,6 +978,13 @@ const s = StyleSheet.create({
 
   reasonBox:  { borderWidth: 1, borderRadius: 8, padding: 10, marginBottom: 8 },
   reasonText: { fontSize: 12, fontWeight: '700', lineHeight: 17 },
+
+  viewProfileBtn: {
+    borderWidth: 1.5, borderColor: C.blueBdr, backgroundColor: C.blueBg,
+    borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12,
+    alignItems: 'center', marginBottom: 8,
+  },
+  viewProfileBtnText: { fontSize: 12, fontWeight: '700', color: C.blue },
 
   emailStatusRow:   { flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginBottom: 4 },
   emailStatusBadge: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },

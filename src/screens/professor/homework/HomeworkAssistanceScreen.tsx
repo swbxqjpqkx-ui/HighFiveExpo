@@ -4,11 +4,15 @@ import {
   ActivityIndicator, useWindowDimensions,
 } from 'react-native';
 import { Course, Profile } from '../../../types';
-import { HomeworkHistoryItem } from '../../../types/homeworkAssistance';
-import { fetchHomeworkAssistanceHistory } from '../../../services/homeworkAssistanceService';
+import { HomeworkHistoryItem, HomeworkHistoryRecord } from '../../../types/homeworkAssistance';
+import {
+  fetchHomeworkAssistanceHistory,
+  fetchProfessorHomeworkHistory,
+} from '../../../services/homeworkAssistanceService';
 import AlignmentCheckerView from './AlignmentCheckerView';
 import HomeworkCheckerView from './HomeworkCheckerView';
 import HistoryView from './HistoryView';
+import HomeworkHistoryView from './HomeworkHistoryView';
 
 const C = {
   forest: '#1A5C38', leaf: '#3A8F5F', mist: '#F2FAF5',
@@ -20,7 +24,7 @@ const C = {
   green50: '#F0F6EF',
 };
 
-type ScreenView = 'home' | 'alignment' | 'checker' | 'history';
+type ScreenView = 'home' | 'alignment' | 'checker' | 'history' | 'homework-history';
 
 interface Props {
   courses: Course[];
@@ -89,6 +93,10 @@ const HomeworkAssistanceScreen: React.FC<Props> = ({ courses, profile }) => {
   const [history, setHistory] = useState<HomeworkHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
 
+  // Rich per-student homework history (graded homework)
+  const [hwHistory, setHwHistory] = useState<HomeworkHistoryRecord[]>([]);
+  const [hwHistoryLoading, setHwHistoryLoading] = useState(true);
+
   useEffect(() => {
     const load = async () => {
       setHistoryLoading(true);
@@ -103,6 +111,22 @@ const HomeworkAssistanceScreen: React.FC<Props> = ({ courses, profile }) => {
     };
     void load();
   }, [profile.id]);
+
+  const loadHomeworkHistory = React.useCallback(async () => {
+    setHwHistoryLoading(true);
+    try {
+      const records = await fetchProfessorHomeworkHistory(profile.id);
+      setHwHistory(records);
+    } catch {
+      setHwHistory([]);
+    } finally {
+      setHwHistoryLoading(false);
+    }
+  }, [profile.id]);
+
+  useEffect(() => {
+    void loadHomeworkHistory();
+  }, [loadHomeworkHistory]);
 
   // ── Sub-views ──────────────────────────────────────────────────────────────
 
@@ -135,6 +159,18 @@ const HomeworkAssistanceScreen: React.FC<Props> = ({ courses, profile }) => {
     );
   }
 
+  if (view === 'homework-history') {
+    return (
+      <HomeworkHistoryView
+        onBack={() => setView('home')}
+        records={hwHistory}
+        professorName={profile.full_name}
+        loading={hwHistoryLoading}
+        onChanged={loadHomeworkHistory}
+      />
+    );
+  }
+
   // ── Home view ──────────────────────────────────────────────────────────────
 
   const recentHistory = history.slice(0, 3);
@@ -149,9 +185,11 @@ const HomeworkAssistanceScreen: React.FC<Props> = ({ courses, profile }) => {
             AI-powered homework alignment checking and student grading tools.
           </Text>
         </View>
-        <TouchableOpacity style={styles.historyBtn} onPress={() => setView('history')}>
-          <Text style={styles.historyBtnText}>🕐 History</Text>
-        </TouchableOpacity>
+        <View style={styles.headerBtns}>
+          <TouchableOpacity style={styles.historyBtnPrimary} onPress={() => setView('homework-history')}>
+            <Text style={styles.historyBtnPrimaryText}>📋 Homework History</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Feature cards */}
@@ -172,37 +210,6 @@ const HomeworkAssistanceScreen: React.FC<Props> = ({ courses, profile }) => {
           onPress={() => setView('checker')}
           wide={isWide}
         />
-      </View>
-
-      {/* Recent activity */}
-      <View style={styles.recentSection}>
-        <View style={styles.recentHeader}>
-          <Text style={styles.recentTitle}>Recent Activity</Text>
-          {history.length > 0 && (
-            <TouchableOpacity onPress={() => setView('history')}>
-              <Text style={styles.viewAllText}>View All →</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {historyLoading ? (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator size="small" color={C.forest} />
-            <Text style={styles.loadingText}>Loading history…</Text>
-          </View>
-        ) : recentHistory.length === 0 ? (
-          <View style={styles.emptyRecent}>
-            <Text style={styles.emptyRecentIcon}>📋</Text>
-            <Text style={styles.emptyRecentTitle}>No checks yet</Text>
-            <Text style={styles.emptyRecentText}>
-              Run your first alignment check or homework grading session to see activity here.
-            </Text>
-          </View>
-        ) : (
-          recentHistory.map(item => (
-            <HistorySummaryCard key={item.id} item={item} />
-          ))
-        )}
       </View>
 
       {/* Quick tips */}
@@ -227,6 +234,12 @@ const styles = StyleSheet.create({
   headerLeft: { flex: 1 },
   title: { fontSize: 24, fontWeight: '700', color: C.forest, marginBottom: 4 },
   headerSubtitle: { fontSize: 14, color: C.inkMid, lineHeight: 20 },
+  headerBtns: { gap: 8, alignItems: 'flex-end' },
+  historyBtnPrimary: {
+    backgroundColor: C.forest, borderRadius: 10,
+    paddingHorizontal: 14, paddingVertical: 8,
+  },
+  historyBtnPrimaryText: { color: C.card, fontSize: 13, fontWeight: '700' },
   historyBtn: {
     borderWidth: 1.5, borderColor: C.forest, borderRadius: 10,
     paddingHorizontal: 14, paddingVertical: 8,

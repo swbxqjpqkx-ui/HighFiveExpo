@@ -19,6 +19,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import HomeworkAssistanceScreen from '../screens/professor/homework/HomeworkAssistanceScreen';
 import ProfessorCalendarScreen from '../screens/professor/ProfessorCalendarScreen';
+import ProfessorTasksScreen from '../screens/professor/ProfessorTasksScreen';
 import {
   getProfessorNotifications, markNotificationRead, markAllNotificationsRead,
   deleteNotification, createNotificationIfNew, routeForNotifType, getNotificationDestination,
@@ -220,7 +221,7 @@ const MainNavigator: React.FC<Props> = ({ profile, courses, teacherStats, studen
       <Drawer.Screen name="Home" options={{ title: 'Home' }}>
         {() => <HomeScreen profile={profile} courses={courses} teacherStats={teacherStats} students={students} />}
       </Drawer.Screen>
-      <Drawer.Screen name="Courses" options={{ title: 'Course Overview' }}>
+      <Drawer.Screen name="Courses" options={{ title: 'Class Overview' }}>
         {() => <CoursesScreen courses={courses} />}
       </Drawer.Screen>
       <Drawer.Screen name="Students" options={{ title: 'Students' }}>
@@ -244,7 +245,7 @@ const MainNavigator: React.FC<Props> = ({ profile, courses, teacherStats, studen
       <Drawer.Screen name="QualityControl" options={{ title: 'Quality Control' }}>
         {() => <QualityControlScreen courses={courses} onNewNotification={handleNewNotification} />}
       </Drawer.Screen>
-      <Drawer.Screen name="Warnings" options={{ title: 'Warnings' }}>
+      <Drawer.Screen name="Warnings" options={{ title: 'Students at Risk' }}>
         {() => (
           <WarningsScreen
             profile={profile}
@@ -257,6 +258,9 @@ const MainNavigator: React.FC<Props> = ({ profile, courses, teacherStats, studen
       </Drawer.Screen>
       <Drawer.Screen name="Calendar" options={{ title: 'Calendar' }}>
         {() => <ProfessorCalendarScreen profile={profile} />}
+      </Drawer.Screen>
+      <Drawer.Screen name="Tasks" options={{ title: 'Tasks' }}>
+        {() => <ProfessorTasksScreen />}
       </Drawer.Screen>
       <Drawer.Screen name="Profile" options={{ title: 'Profile' }}>
         {() => <ProfileScreen profile={profile} courses={courses} />}

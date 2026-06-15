@@ -154,6 +154,42 @@ export interface AIAnalysisResult {
   created_at: string;
 }
 
+// ── Material Check (AI curriculum-alignment) ──────────────────────────────────
+// Richer alignment result for a single uploaded course material. Stored in the
+// EXISTING ai_analysis_results table (analysis_type='material_alignment', the full
+// object packed into the suggestions jsonb column) — professor-private, never shown
+// to admin. No schema or RLS change.
+export type MaterialAlignmentStatus = 'Aligned' | 'Partially Aligned' | 'Not Aligned';
+
+export interface MaterialCheckResult {
+  overallStatus: MaterialAlignmentStatus;
+  alignmentScore: number;            // 0–100
+  overallSummary: string;
+  accreditationCheck: {
+    coveredStandards: string[];
+    missingOrWeakStandards: string[];
+    explanation: string;
+  };
+  schemeOfWorkCheck: {
+    matchedWeeksOrTopics: string[];
+    missingTopics: string[];
+    extraOrUnplannedTopics: string[];
+    sequencingIssues: string[];
+    explanation: string;
+  };
+  learningObjectivesCheck: {
+    supportedObjectives: string[];
+    unsupportedObjectives: string[];
+    explanation: string;
+  };
+  gapsAndProblems: string[];
+  recommendations: string[];
+  // Display meta (not part of the AI JSON — attached by the caller)
+  file_name?: string;
+  file_type?: string;
+  created_at?: string;
+}
+
 // ── Overlaps ──────────────────────────────────────────────────────────────────
 
 export type OverlapSeverity = 'high' | 'medium' | 'low';

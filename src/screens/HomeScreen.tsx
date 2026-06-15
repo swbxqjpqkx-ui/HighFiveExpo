@@ -5,11 +5,13 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import * as Location from 'expo-location';
-import { mockMeetings, mockDeadlines, mockTasks } from '../mock';
+import { mockTasks } from '../mock';
 import { computeWarnings } from '../utils/warnings';
-import { Profile, Course, Task, TeacherStats, StudentWithEnrollments, NewsArticle } from '../types';
+import { Profile, Course, Task, TeacherStats, StudentWithEnrollments, NewsArticle, AdminCalendarEvent } from '../types';
 import { Colors, Spacing, Radius, Green, Ink, Tint } from '../theme';
 import { fetchCourseNews, getProfessorNewsPreferences } from '../services/newsService';
+import { getProfessorCalendarEvents } from '../services/supabase';
+import { getUpcomingCalendarItemsForHome } from '../utils/homeCalendar';
 import CalendarWidget from '../components/CalendarWidget';
 
 // ─── Local colour tokens ─────────────────────────────────────────────────────
@@ -37,11 +39,17 @@ interface CardProps {
   icon: string;
   title: string;
   onViewAll?: () => void;
+  onPress?: () => void;
   children: React.ReactNode;
   footer?: React.ReactNode;
 }
-const Card: React.FC<CardProps> = ({ icon, title, onViewAll, children, footer }) => (
-  <View style={cs.card}>
+const Card: React.FC<CardProps> = ({ icon, title, onViewAll, onPress, children, footer }) => {
+  // When onPress is provided the whole card becomes tappable; otherwise it stays a
+  // plain View so existing cards are unchanged. Inner buttons keep their handlers.
+  const Root: any = onPress ? TouchableOpacity : View;
+  const rootProps = onPress ? { activeOpacity: 1, onPress } : {};
+  return (
+  <Root style={cs.card} {...rootProps}>
     <View style={cs.cardHead}>
       <View style={cs.cardTitleRow}>
         <View style={cs.cardIconBox}><Text style={cs.cardIconText}>{icon}</Text></View>
@@ -55,8 +63,9 @@ const Card: React.FC<CardProps> = ({ icon, title, onViewAll, children, footer })
     </View>
     <View style={cs.cardBody}>{children}</View>
     {footer}
-  </View>
-);
+  </Root>
+  );
+};
 
 // ─── Course Control ───────────────────────────────────────────────────────────
 const COURSE_ICONS = ['📗', '📘', '📙', '📕', '🧪', '🔬', '📓', '📔'];
@@ -150,39 +159,72 @@ const CAL_TINTS = [
   { bg: '#ddeef9', border: '#c0dcf0', dot: C.blue     },
 ];
 
-const PersonalCalendarCard: React.FC = () => {
+interface PersonalCalendarCardProps { profile: Profile; }
+
+const PersonalCalendarCard: React.FC<PersonalCalendarCardProps> = ({ profile }) => {
+  const navigation = useNavigation<any>();
   const today = new Date();
   const dateStr = today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-  const events = [
-    ...mockMeetings.map((m, i) => ({ title: m.title, time: m.time, where: 'Room / Online', tint: CAL_TINTS[i % CAL_TINTS.length] })),
-    ...mockDeadlines.slice(0, 2).map((d, i) => ({ title: d.title, time: 'All day', where: 'Deadline', tint: CAL_TINTS[(mockMeetings.length + i) % CAL_TINTS.length] })),
-  ].slice(0, 4);
+  // Real saved records — the same professor_calendar source the Calendar page uses,
+  // scoped to the logged-in professor.
+  const [allEvents, setAllEvents] = useState<AdminCalendarEvent[]>([]);
+  useEffect(() => {
+    let active = true;
+    getProfessorCalendarEvents(profile.id)
+      .then(rows => { if (active) setAllEvents(rows); })
+      .catch(() => { /* loader already logs; degrade to empty */ });
+    return () => { active = false; };
+  }, [profile.id]);
+
+  // Upcoming-only: finished events drop off; today's upcoming shown in full,
+  // otherwise the closest 4 future records — sorted soonest first.
+  const events = getUpcomingCalendarItemsForHome(allEvents);
+
+  // Feed the same real records to the month grid (meetings vs. deadline dots).
+  const widgetMeetings = allEvents
+    .filter(e => e.type !== 'deadline')
+    .map(e => ({ id: e.id, title: e.title, date: e.date, time: e.time }));
+  const widgetDeadlines = allEvents
+    .filter(e => e.type === 'deadline')
+    .map(e => ({ id: e.id, title: e.title, date: e.date, course_id: '' }));
 
   return (
-    <Card icon="📅" title="PERSONAL CALENDAR">
+    <Card icon="📅" title="PERSONAL CALENDAR" onPress={() => navigation.navigate('Calendar')}>
       <Text style={cal.sub}>{dateStr}</Text>
-      {events.map((ev, idx) => (
-        <View key={idx} style={cal.row}>
-          {/* Time */}
-          <View style={cal.timeCol}>
-            <Text style={cal.time}>{ev.time}</Text>
-          </View>
-          {/* Rail */}
-          <View style={cal.rail}>
-            <View style={[cal.dot, { backgroundColor: ev.tint.dot }]} />
-            {idx < events.length - 1 && <View style={cal.line} />}
-          </View>
-          {/* Event card */}
-          <View style={[cal.eventCard, { backgroundColor: ev.tint.bg, borderColor: ev.tint.border }]}>
-            <Text style={cal.eventName}>{ev.title}</Text>
-            <Text style={cal.eventWhere}>{ev.where}</Text>
-          </View>
-        </View>
-      ))}
+      {events.length === 0 ? (
+        <Text style={cal.empty}>No upcoming plans yet.</Text>
+      ) : (
+        events.map((ev, idx) => {
+          const tint = CAL_TINTS[idx % CAL_TINTS.length];
+          return (
+            <TouchableOpacity
+              key={ev.id}
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('Calendar', { focusDate: ev.date, focusNonce: Date.now() })}
+              style={cal.row}
+            >
+              {/* Time */}
+              <View style={cal.timeCol}>
+                <Text style={cal.time}>{ev.time}</Text>
+              </View>
+              {/* Rail */}
+              <View style={cal.rail}>
+                <View style={[cal.dot, { backgroundColor: tint.dot }]} />
+                {idx < events.length - 1 && <View style={cal.line} />}
+              </View>
+              {/* Event card */}
+              <View style={[cal.eventCard, { backgroundColor: tint.bg, borderColor: tint.border }]}>
+                <Text style={cal.eventName}>{ev.title}</Text>
+                <Text style={cal.eventWhere}>{ev.location || 'Event'}</Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })
+      )}
       {/* Tap a day to see that day's events / deadlines */}
       <View style={cal.widgetWrap}>
-        <CalendarWidget meetings={mockMeetings} deadlines={mockDeadlines} />
+        <CalendarWidget meetings={widgetMeetings} deadlines={widgetDeadlines} />
       </View>
     </Card>
   );
@@ -200,6 +242,7 @@ interface TasksCardProps {
   onTasksChange: (tasks: Task[]) => void;
 }
 const TasksCard: React.FC<TasksCardProps> = ({ tasks, onTasksChange }) => {
+  const navigation = useNavigation<any>();
   const [draft, setDraft] = useState('');
 
   const toggle = (id: string) =>
@@ -237,7 +280,7 @@ const TasksCard: React.FC<TasksCardProps> = ({ tasks, onTasksChange }) => {
   );
 
   return (
-    <Card icon="✅" title="TASKS" footer={footer}>
+    <Card icon="✅" title="TASKS" footer={footer} onPress={() => navigation.navigate('Tasks')}>
       {tasks.map((t, idx) => {
         const ps = priorityStyle(t.priority);
         return (
@@ -417,7 +460,7 @@ const HomeScreen: React.FC<Props> = ({ profile, courses, teacherStats, students 
 
         {/* Right column */}
         <View style={isWide ? hs.rightCol : undefined}>
-          <PersonalCalendarCard />
+          <PersonalCalendarCard profile={profile} />
           <TasksCard tasks={tasks} onTasksChange={setTasks} />
         </View>
       </View>
@@ -480,6 +523,7 @@ const cc = StyleSheet.create({
 // Calendar
 const cal = StyleSheet.create({
   sub: { fontSize: 11, color: C.muted, marginBottom: 10 },
+  empty: { fontSize: 12, color: C.muted, paddingVertical: 14, textAlign: 'center' },
   widgetWrap: { marginTop: 12 },
   row: { flexDirection: 'row', alignItems: 'stretch', marginBottom: 6, gap: 8 },
   timeCol: { width: 52, paddingTop: 8 },

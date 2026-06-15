@@ -63,6 +63,74 @@ const BLANK_AMB: AmbForm = {
   phone: '', role: 'Student Ambassador', photo_url: '', is_active: true,
 };
 
+// ── Open Day event types ─────────────────────────────────────────────────────────
+// The fixed list of event types, plus a final "Other / Custom" option that reveals
+// a free-text input. The emoji is stored on the existing icon_name column.
+const CUSTOM_TYPE = 'Other / Custom';
+const EVENT_TYPES: { emoji: string; label: string }[] = [
+  { emoji: '🏫',   label: 'Campus Tour' },
+  { emoji: '🎓',   label: 'Program Presentations' },
+  { emoji: '👩‍🏫', label: 'Meet the Professors' },
+  { emoji: '💬',   label: 'Student Life Panel' },
+  { emoji: '📋',   label: 'Admissions Desk' },
+  { emoji: '🍽️',   label: 'Networking Lunch' },
+  { emoji: '➕',   label: CUSTOM_TYPE },
+];
+
+type EventForm = {
+  emoji: string; type: string; custom: string; title: string;
+  date: string; start: string; end: string; location: string;
+  host: string; capacity: string; details: string;
+};
+const BLANK_EVENT: EventForm = {
+  emoji: '', type: '', custom: '', title: '',
+  date: '', start: '', end: '', location: '',
+  host: '', capacity: '', details: '',
+};
+
+// Event details are stored as a small JSON envelope inside the existing
+// open_day_items.description column (no schema change). Plain-text descriptions
+// from older program items are left untouched and simply decode to null.
+const EVENT_TAG = '__hf_event';
+type EventMeta = {
+  type: string; date: string; start: string; end: string;
+  location: string; host: string; capacity: string; details: string;
+};
+const encodeEvent = (meta: EventMeta): string =>
+  JSON.stringify({ [EVENT_TAG]: true, v: 1, ...meta });
+const decodeEvent = (description?: string | null): EventMeta | null => {
+  if (!description) return null;
+  const t = description.trim();
+  if (!t.startsWith('{')) return null;
+  try {
+    const obj = JSON.parse(t);
+    if (obj && obj[EVENT_TAG]) {
+      return {
+        type: obj.type ?? '', date: obj.date ?? '', start: obj.start ?? '',
+        end: obj.end ?? '', location: obj.location ?? '', host: obj.host ?? '',
+        capacity: obj.capacity ?? '', details: obj.details ?? '',
+      };
+    }
+  } catch { /* not an event envelope — treat as plain text */ }
+  return null;
+};
+
+// Default sample items seeded by the Open Day migration. These are hidden from the
+// admin page so it shows ONLY admin-created events. They are NOT deleted from
+// Supabase (no DB change) — only filtered out client-side on load.
+const DEFAULT_SEED_ITEMS: { title: string; description: string }[] = [
+  { title: 'Campus Tour',           description: 'Guided walk through our campus facilities and student spaces.' },
+  { title: 'Program Presentations', description: 'Overview of BBA, MBA, and DBA programs by department heads.' },
+  { title: 'Meet the Professors',   description: 'Q&A sessions with faculty members across all programs.' },
+  { title: 'Student Life Panel',    description: 'Current students share their experience and answer questions.' },
+  { title: 'Admissions Desk',       description: 'One-on-one meetings with admissions officers.' },
+  { title: 'Networking Lunch',      description: 'Join students, faculty, and staff for an informal lunch.' },
+];
+const isDefaultSeedItem = (item: OpenDayItem): boolean =>
+  DEFAULT_SEED_ITEMS.some(d =>
+    d.title === (item.title ?? '').trim() &&
+    d.description === (item.description ?? '').trim());
+
 // ── Component ──────────────────────────────────────────────────────────────────
 interface Props { profile: Profile; }
 
@@ -96,6 +164,12 @@ const AdminOpenDayScreen: React.FC<Props> = ({ profile }) => {
   const [ambForm, setAmbForm]           = useState<AmbForm>(BLANK_AMB);
   const [ambSaving, setAmbSaving]       = useState(false);
 
+  // ── Open Day events (stored in the same open_day_items table) ─────
+  const [eventModalOpen, setEventModalOpen] = useState(false);
+  const [eventEditingId, setEventEditingId] = useState<string | null>(null);
+  const [eventForm, setEventForm]           = useState<EventForm>(BLANK_EVENT);
+  const [eventSaving, setEventSaving]       = useState(false);
+
   // ── Load: event stats ─────────────────────────────────────────────
   useEffect(() => {
     getOpenDayStats()
@@ -107,7 +181,10 @@ const AdminOpenDayScreen: React.FC<Props> = ({ profile }) => {
   // ── Load: program items ───────────────────────────────────────────
   const loadItems = useCallback(async () => {
     setItemsLoading(true);
-    try { setItems(await fetchOpenDayItems()); }
+    try {
+      const all = await fetchOpenDayItems();
+      setItems(all.filter(i => !isDefaultSeedItem(i)));
+    }
     catch {}
     finally { setItemsLoading(false); }
   }, []);
@@ -194,6 +271,77 @@ const AdminOpenDayScreen: React.FC<Props> = ({ profile }) => {
     setItems(prev => prev.map(i => i.id === item.id ? { ...i, is_visible: newVal } : i));
     try { await updateOpenDayItem(item.id, { is_visible: newVal }); }
     catch { setItems(prev => prev.map(i => i.id === item.id ? item : i)); }
+  };
+
+  // ── Open Day event handlers ───────────────────────────────────────
+  const openAddEvent = () => {
+    setEventEditingId(null);
+    setEventForm(BLANK_EVENT);
+    setEventModalOpen(true);
+  };
+
+  const openEditEvent = (item: OpenDayItem) => {
+    const ev = decodeEvent(item.description);
+    if (!ev) return;
+    const known = EVENT_TYPES.find(t => t.label === ev.type && t.label !== CUSTOM_TYPE);
+    setEventEditingId(item.id);
+    setEventForm({
+      emoji:    item.icon_name ?? (known?.emoji ?? '➕'),
+      type:     known ? known.label : CUSTOM_TYPE,
+      custom:   known ? '' : ev.type,
+      title:    item.title,
+      date:     ev.date,
+      start:    ev.start,
+      end:      ev.end,
+      location: ev.location,
+      host:     ev.host,
+      capacity: ev.capacity,
+      details:  ev.details,
+    });
+    setEventModalOpen(true);
+  };
+
+  const handleSaveEvent = async () => {
+    const isCustom  = eventForm.type === CUSTOM_TYPE;
+    const typeLabel = (isCustom ? eventForm.custom : eventForm.type).trim();
+    if (!eventForm.type)         { Alert.alert('Required', 'Please choose an event type.'); return; }
+    if (isCustom && !typeLabel)  { Alert.alert('Required', 'Please enter a name for your custom event type.'); return; }
+    if (!eventForm.title.trim()) { Alert.alert('Required', 'Event title cannot be empty.'); return; }
+    setEventSaving(true);
+    try {
+      const description = encodeEvent({
+        type:     typeLabel,
+        date:     eventForm.date.trim(),
+        start:    eventForm.start.trim(),
+        end:      eventForm.end.trim(),
+        location: eventForm.location.trim(),
+        host:     eventForm.host.trim(),
+        capacity: eventForm.capacity.trim(),
+        details:  eventForm.details.trim(),
+      });
+      const patch = {
+        title:      eventForm.title.trim(),
+        description,
+        icon_name:  eventForm.emoji || '➕',
+        is_visible: true,
+      };
+      if (eventEditingId) {
+        const updated = await updateOpenDayItem(eventEditingId, patch);
+        setItems(prev => prev.map(i => i.id === eventEditingId ? updated : i));
+      } else {
+        const inserted = await insertOpenDayItem({ ...patch, display_order: items.length + 1 });
+        setItems(prev =>
+          [...prev, inserted].sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0)),
+        );
+      }
+      setEventModalOpen(false);
+      setSaveBanner(true);
+      setTimeout(() => setSaveBanner(false), 3000);
+    } catch (e: any) {
+      Alert.alert('Save Failed', e.message ?? 'Could not save. Please try again.');
+    } finally {
+      setEventSaving(false);
+    }
   };
 
   // ── Ambassador handlers ───────────────────────────────────────────
@@ -338,11 +486,18 @@ const AdminOpenDayScreen: React.FC<Props> = ({ profile }) => {
         <View style={s.card}>
           <View style={s.cardHeader}>
             <Text style={s.sectionTitle}>Open Day Program</Text>
-            {editMode && (
-              <TouchableOpacity style={s.addBtn} onPress={openAddItem}>
-                <Text style={s.addBtnTxt}>+ Add Item</Text>
-              </TouchableOpacity>
-            )}
+            <View style={s.headerBtns}>
+              {editMode && (
+                <TouchableOpacity style={s.addBtn} onPress={openAddItem}>
+                  <Text style={s.addBtnTxt}>+ Add Item</Text>
+                </TouchableOpacity>
+              )}
+              {isAdmin && (
+                <TouchableOpacity style={s.addBtn} onPress={openAddEvent}>
+                  <Text style={s.addBtnTxt}>+ Add Event</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           {itemsLoading ? (
@@ -351,18 +506,15 @@ const AdminOpenDayScreen: React.FC<Props> = ({ profile }) => {
             <View style={s.emptyState}>
               <Text style={s.emptyIcon}>🎟️</Text>
               <Text style={s.emptyTxt}>
-                {isAdmin && editMode
-                  ? 'Tap "+ Add Item" to create your first program item.'
+                {isAdmin
+                  ? 'No Open Day events saved yet. Click Add Event to create one.'
                   : 'No program items yet.'}
               </Text>
-              {isAdmin && !editMode && (
-                <TouchableOpacity onPress={() => setEditMode(true)}>
-                  <Text style={s.emptyAction}>Tap "Edit Program" to add items</Text>
-                </TouchableOpacity>
-              )}
             </View>
           ) : (
-            items.map((item, idx) => (
+            items.map((item, idx) => {
+              const ev = decodeEvent(item.description);
+              return (
               <View
                 key={item.id}
                 style={[
@@ -377,8 +529,29 @@ const AdminOpenDayScreen: React.FC<Props> = ({ profile }) => {
                     {item.title}
                     {!item.is_visible && <Text style={s.hiddenLabel}> (hidden)</Text>}
                   </Text>
-                  {!!item.description && (
-                    <Text style={s.programDesc} numberOfLines={2}>{item.description}</Text>
+                  {ev ? (
+                    <>
+                      {!!ev.type && <Text style={s.eventType}>{ev.type}</Text>}
+                      {!!(ev.date || ev.start) && (
+                        <Text style={s.eventMeta}>
+                          {ev.date ? `📅 ${ev.date}` : ''}
+                          {ev.start ? `${ev.date ? '    ' : ''}⏰ ${ev.start}${ev.end ? ` – ${ev.end}` : ''}` : ''}
+                        </Text>
+                      )}
+                      {!!ev.location && <Text style={s.eventMeta}>📍 {ev.location}</Text>}
+                      {!!(ev.host || ev.capacity) && (
+                        <Text style={s.eventMeta}>
+                          {ev.host ? `👤 ${ev.host}` : ''}
+                          {ev.host && ev.capacity ? '    ' : ''}
+                          {ev.capacity ? `👥 ${ev.capacity}` : ''}
+                        </Text>
+                      )}
+                      {!!ev.details && <Text style={s.programDesc}>{ev.details}</Text>}
+                    </>
+                  ) : (
+                    !!item.description && (
+                      <Text style={s.programDesc} numberOfLines={2}>{item.description}</Text>
+                    )
                   )}
                 </View>
                 {editMode && (
@@ -386,7 +559,7 @@ const AdminOpenDayScreen: React.FC<Props> = ({ profile }) => {
                     <TouchableOpacity style={s.iconBtn} onPress={() => handleToggleVisible(item)}>
                       <Text style={s.iconBtnTxt}>{item.is_visible ? '👁' : '🙈'}</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={s.iconBtn} onPress={() => openEditItem(item)}>
+                    <TouchableOpacity style={s.iconBtn} onPress={() => ev ? openEditEvent(item) : openEditItem(item)}>
                       <Text style={s.iconBtnTxt}>✏</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[s.iconBtn, s.iconBtnDanger]} onPress={() => handleDeleteItem(item)}>
@@ -395,7 +568,8 @@ const AdminOpenDayScreen: React.FC<Props> = ({ profile }) => {
                   </View>
                 )}
               </View>
-            ))
+              );
+            })
           )}
         </View>
 
@@ -815,6 +989,177 @@ const AdminOpenDayScreen: React.FC<Props> = ({ profile }) => {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* ── Open Day event modal (admin) ─────────────────────────────── */}
+      <Modal
+        visible={eventModalOpen}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => { if (!eventSaving) setEventModalOpen(false); }}
+      >
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={m.root}>
+            <View style={m.header}>
+              <TouchableOpacity
+                onPress={() => { if (!eventSaving) setEventModalOpen(false); }}
+                style={m.cancelBtn}
+                disabled={eventSaving}
+              >
+                <Text style={m.cancelTxt}>Cancel</Text>
+              </TouchableOpacity>
+              <Text style={m.headerTitle}>{eventEditingId ? 'Edit Event' : 'New Event'}</Text>
+              <TouchableOpacity
+                style={[m.saveBtn, eventSaving && { opacity: 0.6 }]}
+                onPress={handleSaveEvent}
+                disabled={eventSaving}
+              >
+                {eventSaving
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Text style={m.saveTxt}>Save Event</Text>}
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={m.body}>
+              {/* Event type picker */}
+              <View style={m.field}>
+                <Text style={m.label}>Event type <Text style={{ color: C.red }}>*</Text></Text>
+                <View style={m.typeGrid}>
+                  {EVENT_TYPES.map(t => {
+                    const active = eventForm.type === t.label;
+                    return (
+                      <TouchableOpacity
+                        key={t.label}
+                        style={[m.typeChip, active && m.typeChipActive]}
+                        onPress={() => setEventForm(f => ({ ...f, type: t.label, emoji: t.emoji }))}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={m.typeChipEmoji}>{t.emoji}</Text>
+                        <Text style={[m.typeChipTxt, active && m.typeChipTxtActive]}>{t.label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* Custom type name (only for Other / Custom) */}
+              {eventForm.type === CUSTOM_TYPE && (
+                <View style={m.field}>
+                  <Text style={m.label}>Custom event name <Text style={{ color: C.red }}>*</Text></Text>
+                  <TextInput
+                    style={m.input}
+                    value={eventForm.custom}
+                    onChangeText={v => setEventForm(f => ({ ...f, custom: v }))}
+                    placeholder="e.g. Alumni Mixer"
+                    placeholderTextColor={C.inkSoft}
+                  />
+                </View>
+              )}
+
+              {/* Title */}
+              <View style={m.field}>
+                <Text style={m.label}>Event title <Text style={{ color: C.red }}>*</Text></Text>
+                <TextInput
+                  style={m.input}
+                  value={eventForm.title}
+                  onChangeText={v => setEventForm(f => ({ ...f, title: v }))}
+                  placeholder="e.g. Morning Campus Tour"
+                  placeholderTextColor={C.inkSoft}
+                />
+              </View>
+
+              {/* Date */}
+              <View style={m.field}>
+                <Text style={m.label}>Date</Text>
+                <TextInput
+                  style={m.input}
+                  value={eventForm.date}
+                  onChangeText={v => setEventForm(f => ({ ...f, date: v }))}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor={C.inkSoft}
+                />
+              </View>
+
+              {/* Start + End time */}
+              <View style={m.twoCol}>
+                <View style={[m.field, { flex: 1 }]}>
+                  <Text style={m.label}>Start time</Text>
+                  <TextInput
+                    style={m.input}
+                    value={eventForm.start}
+                    onChangeText={v => setEventForm(f => ({ ...f, start: v }))}
+                    placeholder="10:00"
+                    placeholderTextColor={C.inkSoft}
+                  />
+                </View>
+                <View style={[m.field, { flex: 1 }]}>
+                  <Text style={m.label}>End time</Text>
+                  <TextInput
+                    style={m.input}
+                    value={eventForm.end}
+                    onChangeText={v => setEventForm(f => ({ ...f, end: v }))}
+                    placeholder="11:00"
+                    placeholderTextColor={C.inkSoft}
+                  />
+                </View>
+              </View>
+
+              {/* Location */}
+              <View style={m.field}>
+                <Text style={m.label}>Location</Text>
+                <TextInput
+                  style={m.input}
+                  value={eventForm.location}
+                  onChangeText={v => setEventForm(f => ({ ...f, location: v }))}
+                  placeholder="e.g. Main Hall, Building A"
+                  placeholderTextColor={C.inkSoft}
+                />
+              </View>
+
+              {/* Description */}
+              <View style={m.field}>
+                <Text style={m.label}>Description / details</Text>
+                <TextInput
+                  style={[m.input, m.inputMulti]}
+                  value={eventForm.details}
+                  onChangeText={v => setEventForm(f => ({ ...f, details: v }))}
+                  placeholder="What happens during this activity…"
+                  placeholderTextColor={C.inkSoft}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                />
+              </View>
+
+              {/* Host */}
+              <View style={m.field}>
+                <Text style={m.label}>Responsible person / host <Text style={{ color: C.inkSoft, fontWeight: '400' }}>(optional)</Text></Text>
+                <TextInput
+                  style={m.input}
+                  value={eventForm.host}
+                  onChangeText={v => setEventForm(f => ({ ...f, host: v }))}
+                  placeholder="e.g. Dr. Keller"
+                  placeholderTextColor={C.inkSoft}
+                />
+              </View>
+
+              {/* Capacity / notes */}
+              <View style={m.field}>
+                <Text style={m.label}>Capacity / notes <Text style={{ color: C.inkSoft, fontWeight: '400' }}>(optional)</Text></Text>
+                <TextInput
+                  style={m.input}
+                  value={eventForm.capacity}
+                  onChangeText={v => setEventForm(f => ({ ...f, capacity: v }))}
+                  placeholder="e.g. 30 seats"
+                  placeholderTextColor={C.inkSoft}
+                />
+              </View>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 };
@@ -852,6 +1197,7 @@ const s = StyleSheet.create({
   sectionTitle:{ fontSize: 15, fontWeight: '700', color: C.ink },
   sectionSub:  { fontSize: 12, color: C.inkSoft, marginTop: 2 },
 
+  headerBtns:{ flexDirection: 'row', alignItems: 'center', gap: 8 },
   addBtn:    { backgroundColor: C.forest, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 7 },
   addBtnTxt: { fontSize: 12, fontWeight: '700', color: '#fff' },
 
@@ -870,6 +1216,8 @@ const s = StyleSheet.create({
   programTitleHidden:{ color: C.inkSoft, textDecorationLine: 'line-through' },
   hiddenLabel:       { fontSize: 12, fontWeight: '400', color: C.inkSoft },
   programDesc:       { fontSize: 12, color: C.inkMid, marginTop: 2, lineHeight: 17 },
+  eventType:         { fontSize: 12, color: C.leaf, fontWeight: '600', marginTop: 2 },
+  eventMeta:         { fontSize: 12, color: C.inkMid, marginTop: 2 },
 
   itemActions:  { flexDirection: 'row', gap: 6 },
   iconBtn:      { width: 34, height: 34, borderRadius: 8, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
@@ -945,6 +1293,12 @@ const m = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 16,
     backgroundColor: C.card, borderRadius: 10, borderWidth: 1, borderColor: C.border, padding: 14,
   },
+  typeGrid:         { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  typeChip:         { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: C.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: C.card },
+  typeChipActive:   { borderColor: C.forest, backgroundColor: C.mist },
+  typeChipEmoji:    { fontSize: 16 },
+  typeChipTxt:      { fontSize: 13, color: C.ink, fontWeight: '600' },
+  typeChipTxtActive:{ color: C.forest },
 });
 
 export default AdminOpenDayScreen;

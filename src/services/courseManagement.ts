@@ -96,6 +96,7 @@ import {
   ProfessorTask,
   AccreditationStandard,
   SchemeTopic,
+  MaterialCheckResult,
 } from '../types/courseManagement';
 import { extractSchemeTopics, compareSchemeTopics } from './aiAnalysis';
 import { createNotificationIfNew, notifyAllAdmins } from './notificationService';
@@ -354,6 +355,59 @@ export const getAllAIAnalysisForCourse = async (courseId: string): Promise<AIAna
     .order('created_at', { ascending: false });
   if (error) throw error;
   return data ?? [];
+};
+
+// ── Material Check history (professor-private) ────────────────────────────────
+// Reuses the EXISTING ai_analysis_results table — no schema/RLS change. The rich
+// MaterialCheckResult is packed into the suggestions jsonb column; analysis_type
+// 'material_alignment' marks it professor-private. Admin's getOrRunAIAnalysis
+// explicitly excludes this type, so it never surfaces in any admin view.
+const MATERIAL_ALIGNMENT_TYPE = 'material_alignment';
+
+export const saveMaterialCheckResult = async (
+  courseId: string,
+  materialId: string,
+  result: MaterialCheckResult,
+): Promise<void> => {
+  const compliance =
+    result.overallStatus === 'Aligned' ? 'full'
+      : result.overallStatus === 'Not Aligned' ? 'non_compliant'
+      : 'partial';
+  const { error } = await supabase.from('ai_analysis_results').insert({
+    course_id: courseId,
+    target_id: materialId,
+    target_type: 'material',
+    analysis_type: MATERIAL_ALIGNMENT_TYPE,
+    status: 'complete',
+    overall_score: result.alignmentScore,
+    compliance_level: compliance,
+    issues: [],
+    // Full rich result lives here (jsonb). Read back via getMaterialCheckResult.
+    suggestions: [JSON.stringify(result)],
+  });
+  if (error) throw error;
+};
+
+export const getMaterialCheckResult = async (
+  courseId: string,
+  materialId: string,
+): Promise<MaterialCheckResult | null> => {
+  const { data, error } = await supabase
+    .from('ai_analysis_results')
+    .select('*')
+    .eq('course_id', courseId)
+    .eq('target_id', materialId)
+    .eq('analysis_type', MATERIAL_ALIGNMENT_TYPE)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  try {
+    const raw = Array.isArray(data.suggestions) ? data.suggestions[0] : null;
+    if (raw) return { ...(JSON.parse(raw) as MaterialCheckResult), created_at: data.created_at };
+  } catch {}
+  return null;
 };
 
 // ── Overlaps ──────────────────────────────────────────────────────────────────

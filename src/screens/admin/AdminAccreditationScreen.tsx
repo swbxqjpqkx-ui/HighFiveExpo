@@ -42,7 +42,7 @@ const AdminAccreditationScreen: React.FC<Props> = ({ profile, overlapFocusNonce 
       {/* Page header */}
       <View style={s.pageHeader}>
         <View>
-          <Text style={s.pageTitle}>Material Management</Text>
+          <Text style={s.pageTitle}>Course Management</Text>
           <Text style={s.pageSub}>
             {settings?.accreditation ?? 'AACSB'} framework
             {settings?.name ? ` · ${settings.name}` : ''}
